@@ -84,7 +84,7 @@ export function useChatManager() {
       return newState;
     });
     return newConv.id;
-  }, [saveToStorage]);
+  }, [saveToStorage, chatState.conversations.length]);
 
   const addMessage = useCallback((conversationId: string, message: Message) => {
     setChatState(prevState => {

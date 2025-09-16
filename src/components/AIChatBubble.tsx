@@ -109,7 +109,7 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
     if (conversations.length === 0) {
       createNewConversation(undefined, currentChallengeId);
     }
-  }, [isHydrated, conversations.length, createNewConversation, currentChallengeId, trackerData.state.challenges]);
+  }, [isHydrated, conversations.length, createNewConversation, currentChallengeId]);
 
   // Set (or restore) active conversation after hydration
   React.useEffect(() => {
@@ -232,6 +232,11 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
         for (const toolCall of aiResponse.toolCalls) {
           if (toolCall.type === 'function') {
             const functionName = toolCall.function.name;
+            // Skip invalid/unknown tool calls (no name)
+            if (!functionName || !functionName.trim()) {
+              console.warn('Skipping tool call with empty function name. toolCall:', toolCall);
+              continue;
+            }
             console.log(`Raw function arguments JSON:`, toolCall.function.arguments);
 
             let functionArgs;
@@ -323,6 +328,12 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
 
         console.log(`Completed ${toolResults.length} tool executions`);
 
+        // Remove invalid tool results (missing tool_call_id) to satisfy providers expecting strict mapping
+        const validToolResults = toolResults.filter(tr => {
+          const id = (tr as { tool_call_id?: string }).tool_call_id;
+          return typeof id === 'string' && id.trim().length > 0;
+        });
+
         // Build the conversation for Step 3
         const conversationMessages: ChatCompletionMessageParam[] = [
           {
@@ -366,8 +377,8 @@ Be helpful, concise, and proactive in suggesting actions.`
             content: aiResponse.response,
             tool_calls: aiResponse.toolCalls
           },
-          // Add tool results
-          ...toolResults
+          // Add tool results (validated)
+          ...validToolResults
         ];
 
         console.log('Step 3: Sending conversation with tool results:', conversationMessages);
@@ -533,9 +544,8 @@ Be helpful, concise, and proactive in suggesting actions.`
                       timestamp: new Date(),
                       text: 'AI is processing...',
                       // custom marker consumed by ChatMessageTemplate
-                      // @ts-ignore
                       processing: true
-                    } as any);
+                    } as unknown as Message);
                   }
                   return base;
                 })()}

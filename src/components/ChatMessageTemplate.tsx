@@ -1,11 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { ChatMessageTemplateProps } from '@progress/kendo-react-conversational-ui';
+import { ChatMessageTemplateProps, Message } from '@progress/kendo-react-conversational-ui';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
 const ChatMessageTemplate = (props: ChatMessageTemplateProps) => {
-  const message = props.item as any;
+  type MessageWithProcessing = Message & { processing?: boolean };
+  const message = props.item as MessageWithProcessing;
   const isBot = message.author.id === 0; // Bot has id 0
   const isProcessing = Boolean(message.processing);
 

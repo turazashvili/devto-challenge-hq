@@ -35,6 +35,9 @@ importers:
       '@progress/kendo-react-intl':
         specifier: ^12.0.1
         version: 12.0.1(@progress/kendo-intl@3.1.2)(@progress/kendo-licensing@1.7.1)(@progress/kendo-react-common@12.0.1(@progress/kendo-licensing@1.7.1)(@progress/kendo-svg-icons@4.5.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@progress/kendo-react-labels':
+        specifier: ^12.0.1
+        version: 12.0.1(@progress/kendo-licensing@1.7.1)(@progress/kendo-react-common@12.0.1(@progress/kendo-licensing@1.7.1)(@progress/kendo-svg-icons@4.5.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@progress/kendo-react-intl@12.0.1(@progress/kendo-intl@3.1.2)(@progress/kendo-licensing@1.7.1)(@progress/kendo-react-common@12.0.1(@progress/kendo-licensing@1.7.1)(@progress/kendo-svg-icons@4.5.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@progress/kendo-react-layout':
         specifier: ^12.0.1
         version: 12.0.1(1d81764185340196944d9239dbc64d74)

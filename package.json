@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
+    "postinstall": "npx -y @progress/kendo-licensing activate",
     "start": "next start",
     "lint": "eslint"
   },
@@ -18,6 +19,7 @@
     "@progress/kendo-react-grid": "^12.0.1",
     "@progress/kendo-react-inputs": "^12.0.1",
     "@progress/kendo-react-intl": "^12.0.1",
+    "@progress/kendo-react-labels": "^12.0.1",
     "@progress/kendo-react-layout": "^12.0.1",
     "@progress/kendo-react-progressbars": "^12.0.1",
     "@progress/kendo-svg-icons": "^4.5.0",
