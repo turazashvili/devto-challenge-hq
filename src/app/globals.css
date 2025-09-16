@@ -1,8 +1,13 @@
 @import "tailwindcss";
+@import "@progress/kendo-theme-default/dist/all.css";
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111111;
+  --kendo-color-primary: #111111;
+  --kendo-color-primary-text: #ffffff;
+  --kendo-color-secondary: #111111;
+  --kendo-color-secondary-text: #ffffff;
 }
 
 @theme inline {
@@ -12,15 +17,60 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+.kendo-reset {
+  font-family: inherit;
+}
+
+.k-grid-neutral {
+  --kendo-body-bg: #ffffff;
+  --kendo-body-text: #111111;
+  --kendo-subtle-text: #3a3a3a;
+  --kendo-table-border: rgba(17, 17, 17, 0.08);
+  background: #ffffff;
+  color: #111111;
+  border-radius: 1.25rem;
+}
+
+.k-grid-neutral .k-table-thead th {
+  background: #111111;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.k-grid-neutral .k-table-tbody tr:hover {
+  background: rgba(17, 17, 17, 0.06);
+}
+
+.badge-muted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffffff;
+  font-size: 11px;
+  padding: 0.25rem 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.k-progressbar {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.k-progressbar .k-selected
+/* stylelint-disable-next-line no-descending-specificity */
+{
+  background: #111111;
+}
+
+.k-dialog-wrapper .k-overlay {
+  background: rgba(17, 17, 17, 0.55);
 }

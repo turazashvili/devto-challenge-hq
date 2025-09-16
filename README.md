@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DEV Challenge Companion
 
-## Getting Started
+A modern Next.js workspace to plan, track, and ship submissions for [DEV.to](https://dev.to/) challenges. It runs entirely in the browser using local storage, so you can brainstorm, prioritise, and manage tasks without creating an account or wiring up a backend.
 
-First, run the development server:
+## Features
+
+- **Dashboard overview** – quick stats, momentum tracking, and upcoming milestone highlights.
+- **Challenge pipeline** – update statuses inline, see automatic progress bars, and keep descriptions and tags close at hand.
+- **Challenge detail view** – open any challenge to see every linked idea, task, and resource in a single monochrome workspace with inline capture.
+- **Inline editing** – update challenge details, tasks, ideas, and resources without leaving their context.
+- **Task execution tracker** – filterable status dropdowns with due dates to make editing and publishing sprints visible.
+- **Idea lab & resource vault** – capture sparks, inspiration, and useful links with custom tags.
+- **One-click capture** – App Bar shortcuts open KendoReact dialog forms for logging challenges, ideas, tasks, and resources from anywhere in the app.
+
+## Tech stack
+
+- [Next.js 15 App Router](https://nextjs.org/) with TypeScript and Tailwind CSS
+- [KendoReact](https://www.telerik.com/kendo-react-ui/) components (AppBar, Grid, Dialogs, Inputs, Dropdowns, ProgressBar)
+- Local storage persistence (`window.localStorage`) for a zero-backend experience
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to start using the workspace. Data is stored in your browser under the key `dev-challenge-tracker-state`. Clearing site data or switching browsers will reset the workspace to the starter sample content.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Dashboard view: `/`
+- Focused challenge view: `/challenges/<challenge-id>`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Using KendoReact locally
 
-## Learn More
+The project pulls in KendoReact packages from npm. Telerik requires a license key for production usage. If you are evaluating the library, request a trial key and export it as `KENDO_UI_LICENSE` before running `npm run dev`:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+export KENDO_UI_LICENSE="{your-license-key}"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Without a key you may see console warnings when the development server boots, but the demo still runs for local exploration.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data model cheatsheet
 
-## Deploy on Vercel
+| Entity     | Key fields                                             |
+|------------|--------------------------------------------------------|
+| Challenge  | `title`, `theme`, `status`, optional `deadline`, `tags`|
+| Task       | `challengeId` (optional), `status`, optional `dueDate` |
+| Idea       | `challengeId` (optional), `impact`, `tags`             |
+| Resource   | `url`, `type`, optional `challengeId`, `tags`          |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Entries are timestamp-free and designed for quick capture. Challenge status automatically updates the progress bar using a simple percentage mapping.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Customisation tips
+
+- Update starter content in `src/data/defaultState.ts`.
+- Tune styles in `src/app/globals.css`; the UI layers use Tailwind utility classes plus the default Kendo theme.
+- Extend state logic or persistence strategies in `src/lib/useTrackerData.ts` if you later want to sync to a backend.
+
+## Linting
+
+```bash
+npm run lint
+```
+
+The script runs ESLint with the default Next.js configuration.
