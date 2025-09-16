@@ -69,3 +69,221 @@ body {
 .k-dialog-wrapper .k-overlay {
   background: rgba(17, 17, 17, 0.55);
 }
+
+/* Markdown styling */
+.markdown-content h1 {
+  font-size: 1.875rem; /* 30px */
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 1.5rem 0 1rem 0;
+  color: #111111;
+}
+
+.markdown-content h2 {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.25rem 0 0.75rem 0;
+  color: #111111;
+}
+
+.markdown-content h3 {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 1rem 0 0.5rem 0;
+  color: #111111;
+}
+
+.markdown-content h4 {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0.875rem 0 0.5rem 0;
+  color: #111111;
+}
+
+.markdown-content h5 {
+  font-size: 1rem; /* 16px */
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0.75rem 0 0.5rem 0;
+  color: #111111;
+}
+
+.markdown-content h6 {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0.75rem 0 0.5rem 0;
+  color: #111111;
+}
+
+.markdown-content p {
+  margin: 0.75rem 0;
+  line-height: 1.6;
+}
+
+.markdown-content ul, .markdown-content ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.markdown-content li {
+  margin: 0.25rem 0;
+  line-height: 1.5;
+}
+
+.markdown-content strong {
+  font-weight: 700;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content code {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875em;
+}
+
+.markdown-content pre {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #111111;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: #666666;
+}
+
+.markdown-content a {
+  color: #111111;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-content a:hover {
+  color: #333333;
+}
+
+/* Chat-specific markdown styling */
+.chat-markdown {
+  font-size: 0.875rem; /* 14px - smaller for chat */
+  line-height: 1.5;
+}
+
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4,
+.chat-markdown h5,
+.chat-markdown h6 {
+  margin: 0.5rem 0 0.25rem 0;
+  font-size: 1rem; /* Smaller headings in chat */
+  font-weight: 600;
+}
+
+.chat-markdown p {
+  margin: 0.25rem 0;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+  margin: 0.25rem 0;
+  padding-left: 1rem;
+}
+
+.chat-markdown li {
+  margin: 0.125rem 0;
+}
+
+.chat-markdown code {
+  font-size: 0.8em;
+  padding: 0.1rem 0.2rem;
+}
+
+.chat-markdown pre {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* Animated typing dots for processing indicator */
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+}
+.typing-dots span {
+  width: 4px;
+  height: 4px;
+  margin-left: 3px;
+  border-radius: 9999px;
+  background-color: #6b7280; /* gray-500 */
+  display: inline-block;
+  animation: typing-bounce 1.2s infinite ease-in-out;
+}
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes typing-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.6; }
+  40% { transform: translateY(-2px); opacity: 1; }
+}
+
+/* Chat bubble improvements */
+.k-chat-bubble {
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Make user (right) bubbles wider by default */
+.user-bubble {
+  max-width: 85% !important;
+  padding: 0.5rem 0.75rem; /* increase inner space of the black box */
+}
+
+.k-chat-message-text {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
+}
+
+/* Ensure chat messages don't overflow */
+.k-chat-message {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Improve spacing for long messages */
+.k-chat-bubble-content {
+  padding: 0.5rem;
+  max-width: 100%;
+}
+
+/* Hide Kendo Chat attachment (paperclip) button in the input area */
+.k-chat .k-upload-button-wrap,
+.k-chat .k-upload-button,
+.k-chat .k-input-actions .k-button[aria-label*="Attach"],
+.k-chat .k-input-actions .k-button[title*="Attach"],
+.k-chat .k-input-actions .k-button .k-i-attachment {
+  display: none !important;
+}

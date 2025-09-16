@@ -28,6 +28,7 @@ import type {
   Resource,
   Task,
 } from "@/types/tracker";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 const panelClass =
   "rounded-3xl border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(17,17,17,0.05)]";
@@ -803,9 +804,7 @@ const handleCardKeyDown = (
                 <h1 className="text-3xl font-semibold text-black">{challenge.title}</h1>
                 <p className="text-sm text-neutral-600">{challenge.theme}</p>
               </div>
-              {challenge.description && (
-                <p className="text-sm text-neutral-600">{challenge.description}</p>
-              )}
+              <MarkdownRenderer content={challenge.description} className="mt-3 text-sm text-neutral-600" />
               <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
                 {challenge.tags.map((tag) => (
                   <span key={tag} className="rounded-full border border-black/10 px-2 py-1">
@@ -899,7 +898,7 @@ const handleCardKeyDown = (
                         />
                       </div>
                     </div>
-                    {task.notes && <p className="mt-3 text-sm text-neutral-600">{task.notes}</p>}
+                    <MarkdownRenderer content={task.notes} className="mt-3 text-sm text-neutral-600" />
                   </li>
                 ))}
               </ul>
@@ -946,7 +945,7 @@ const handleCardKeyDown = (
                       </div>
                       <span className="badge-muted">{idea.impact}</span>
                     </div>
-                    <p className="mt-3 text-sm text-neutral-600">{idea.notes}</p>
+                <MarkdownRenderer content={idea.notes} className="mt-3 text-sm text-neutral-600" />
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-600">
                       {idea.tags.map((tag) => (
                         <span key={tag} className="rounded-full border border-black/10 px-2 py-1">
@@ -1000,7 +999,7 @@ const handleCardKeyDown = (
                       <p className="text-xs text-neutral-500">{resource.type}</p>
                     </div>
                   </div>
-                  {resource.notes && <p className="mt-2 text-sm text-neutral-600">{resource.notes}</p>}
+                  <MarkdownRenderer content={resource.notes} className="mt-2 text-sm text-neutral-600" />
                   <a
                     href={resource.url}
                     target="_blank"

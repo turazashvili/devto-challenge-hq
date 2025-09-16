@@ -58,8 +58,9 @@ export class AIService {
         {
           role: 'system',
           content: `You are an AI assistant for a dev challenge tracker. You can help users manage their challenges, tasks, ideas, and resources.
+Format every reply as clean Markdown with headings and bullet lists. Keep sections short and readable.
 
-Available functions:
+Available functions (Make sure to send text in markdown format):
 - createChallenge: Create a new challenge (make sure the description will include all details about this challenge provided either by user or by you scraping the link they sent. focus on the challenge when putting description. no other info)
 - addTask: Add a task to a challenge
 - addIdea: Add an idea to a challenge

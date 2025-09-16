@@ -33,6 +33,7 @@ import type {
   Resource,
   Task,
 } from "@/types/tracker";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 const challengeStatuses: ChallengeStatus[] = [
   "Ideation",
@@ -1008,7 +1009,7 @@ export default function Home() {
               </div>
               <span className="badge-muted">{idea.impact}</span>
             </header>
-            <p className="mt-3 text-sm text-neutral-600">{idea.notes}</p>
+            <MarkdownRenderer content={idea.notes} className="mt-3 text-sm text-neutral-600" />
             <div className="mt-4 flex flex-wrap gap-2 text-xs text-neutral-600">
               {idea.tags.map((tag) => (
                 <span key={tag} className="rounded-full border border-black/10 px-2 py-1">

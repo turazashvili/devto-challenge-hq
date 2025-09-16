@@ -27,6 +27,8 @@
     "openai": "^5.20.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-markdown": "^9.1.0",
+    "rehype-sanitize": "^6.0.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
@@ -38,7 +40,9 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
+    "remark-gfm": "^4.0.1",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "type": "module"
 }

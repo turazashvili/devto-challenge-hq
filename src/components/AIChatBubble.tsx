@@ -10,6 +10,7 @@ import { useAISettings } from '../hooks/useAISettings';
 import { aiService } from '../services/aiService';
 import { functionExecutor } from '../services/functionExecutor';
 import AISettingsDialog from './AISettingsDialog';
+import ChatMessageTemplate from './ChatMessageTemplate';
 import type {
   ChatCompletionMessageParam,
   ChatCompletionToolMessageParam,
@@ -82,6 +83,8 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
   const {
     conversations,
     activeConversation,
+    activeConversationId,
+    isHydrated,
     createNewConversation,
     addMessage,
     setActiveConversation,
@@ -90,29 +93,35 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
 
   const trackerData = useTrackerContext();
   const { settings } = useAISettings();
-
-  // Create initial conversation if none exists
+  
+  // Use ref to always get latest settings
+  const settingsRef = React.useRef(settings);
+  settingsRef.current = settings;
+  
+  // Debug: Log settings changes
   React.useEffect(() => {
+    console.log('AIChatBubble: Settings updated:', settings);
+  }, [settings]);
+
+  // Create initial conversation if none exists (only after hydration)
+  React.useEffect(() => {
+    if (!isHydrated) return;
     if (conversations.length === 0) {
-      if (currentChallengeId) {
-        // Find challenge title for better conversation name
-        const challenge = trackerData.state.challenges.find(c => c.id === currentChallengeId);
-        const conversationTitle = challenge ? `Chat: ${challenge.title}` : 'Challenge Chat';
-        createNewConversation(conversationTitle, currentChallengeId);
-      } else {
-        createNewConversation('General Chat');
-      }
+      createNewConversation(undefined, currentChallengeId);
     }
-  }, [conversations.length, createNewConversation, currentChallengeId, trackerData.state.challenges]);
+  }, [isHydrated, conversations.length, createNewConversation, currentChallengeId, trackerData.state.challenges]);
 
-  // Set active conversation if there's none but conversations exist
+  // Set (or restore) active conversation after hydration
   React.useEffect(() => {
+    if (!isHydrated) return;
     if (!activeConversation && conversations.length > 0) {
-      setActiveConversation(conversations[0].id);
+      // Prefer stored id if available
+      const toActivate = activeConversationId || conversations[0].id;
+      setActiveConversation(toActivate);
     }
-  }, [activeConversation, conversations, setActiveConversation]);
+  }, [isHydrated, activeConversation, activeConversationId, conversations, setActiveConversation]);
 
-  const addNewMessage = async (event: {message: {text?: string}}) => {
+  const addNewMessage = React.useCallback(async (event: {message: {text?: string}}) => {
     if (!activeConversation || isProcessing) return;
 
     // Add user message exactly like the working example
@@ -127,7 +136,7 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
     addMessage(activeConversation.id, userMessage);
 
     // Check if API key is configured before processing
-    if (!settings.apiKey) {
+    if (!settingsRef.current.apiKey) {
       // Check if the last message is already the API key prompt to avoid duplicates
       const lastMessage = activeConversation.messages[activeConversation.messages.length - 1];
       const isLastMessageApiPrompt = lastMessage?.text?.includes('configure your OpenRouter API key');
@@ -183,12 +192,19 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
       // setStreamingText('');
       const currentStreamText = '';
 
-      const rawModelId = settings.selectedModel || '';
+      const rawModelId = settingsRef.current.selectedModel || '';
       const normalizedModelId = rawModelId.replace(/:online$/i, '');
       const effectiveSettings = {
-        ...settings,
+        ...settingsRef.current,
         selectedModel: `${normalizedModelId}${searchEnabled ? ':online' : ''}`,
       };
+      
+      console.log('AIChatBubble: Using settings in addNewMessage:', {
+        rawModelId,
+        normalizedModelId,
+        effectiveSettings,
+        timestamp: new Date().toISOString()
+      });
 
       const aiResponse = await aiService.processMessage(
         userMessage.text || '',
@@ -282,22 +298,25 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
 
           console.log(`Batch execution completed:`, results);
 
-          // Create tool results for each function
+          // Create tool results for each function (ensure string content for provider bridges)
           allFunctions.forEach((func, index) => {
+            const raw = results[index] ?? `Executed ${func.name}`;
+            const content = typeof raw === 'string' ? raw : JSON.stringify(raw);
             toolResults.push({
               role: 'tool',
               tool_call_id: func.toolCallId,
-              content: results[index] || `Executed ${func.name}`
+              content
             });
           });
 
         } catch (error) {
           console.error('Batch execution error:', error);
           allFunctions.forEach(func => {
+            const content = `Error executing ${func.name}: ${error instanceof Error ? error.message : String(error)}`;
             toolResults.push({
               role: 'tool',
               tool_call_id: func.toolCallId,
-              content: `Error executing ${func.name}: ${error}`
+              content
             });
           });
         }
@@ -310,11 +329,13 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
             role: 'system' as const,
             content: `You are an AI assistant for a dev challenge tracker. You can help users manage their challenges, tasks, ideas, and resources.
 
-Available functions:
-- createChallenge: Create a new challenge (only when user explicitly wants to create a NEW challenge)
-- addTask: Add a task to an EXISTING challenge
-- addIdea: Add an idea to an EXISTING challenge
-- addResource: Add a resource to an EXISTING challenge
+Format every reply as clean Markdown with headings and bullet lists. Keep sections short and readable.
+
+Available functions (Make sure to send text in markdown format):
+- createChallenge: Create a new challenge (only when user explicitly wants to create a NEW challenge. IMPORTANT: Format the description parameter as Markdown with main headings (##), bullet points, and proper formatting)
+- addTask: Add a task to an EXISTING challenge (IMPORTANT: Format the notes parameter as Markdown with smaller subheadings (### and ####), bullet points, and proper formatting)
+- addIdea: Add an idea to an EXISTING challenge (IMPORTANT: Format the notes parameter as Markdown with smaller subheadings (### and ####), bullet points, and proper formatting)
+- addResource: Add a resource to an EXISTING challenge (IMPORTANT: Format the notes parameter as Markdown with smaller subheadings (### and ####), bullet points, and proper formatting)
 - getChallengeList: Get list of challenges
 - getChallengeDetails: Get details of a specific challenge
 
@@ -393,7 +414,7 @@ Be helpful, concise, and proactive in suggesting actions.`
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [activeConversation, isProcessing, addMessage, searchEnabled, trackerData.state.challenges, currentChallengeId]);
 
   return (
     <>
@@ -444,7 +465,7 @@ Be helpful, concise, and proactive in suggesting actions.`
                 ))}
               </select>
               <button
-                onClick={() => createNewConversation(`Chat ${conversations.length + 1}`)}
+                onClick={() => createNewConversation()}
                 className="bg-blue-500 hover:bg-blue-400 px-2 py-1 rounded text-xs"
                 title="New Chat"
               >
@@ -500,17 +521,35 @@ Be helpful, concise, and proactive in suggesting actions.`
             {activeConversation ? (
               <Chat
                 key={`chat-${activeConversation.id}`}
-                messages={activeConversation.messages.map((msg, index) => ({
-                  ...msg,
-                  id: msg.id || `fallback-${index}-${Date.now()}`
-                }))}
+                messages={(function() {
+                  const base = activeConversation.messages.map((msg, index) => ({
+                    ...msg,
+                    id: msg.id || `fallback-${index}-${Date.now()}`
+                  }));
+                  if (isProcessing) {
+                    base.push({
+                      id: `processing-${activeConversation.id}`,
+                      author: bot,
+                      timestamp: new Date(),
+                      text: 'AI is processing...',
+                      // custom marker consumed by ChatMessageTemplate
+                      // @ts-ignore
+                      processing: true
+                    } as any);
+                  }
+                  return base;
+                })()}
+                
                 authorId={user.id}
                 onSendMessage={addNewMessage}
                 placeholder={isProcessing ? "AI is thinking..." : "Type your message here..."}
                 height={getChatHeight()}
                 width={windowWidth < 640 ? 320 : 384}
                 className="k-m-auto"
+                uploadConfig={{ disabled: true }}
+                messageTemplate={ChatMessageTemplate}
               />
+              
             ) : (
               <div style={{
                 display: 'flex',
@@ -521,7 +560,7 @@ Be helpful, concise, and proactive in suggesting actions.`
                 <div style={{ textAlign: 'center' }}>
                   <p>No active conversation</p>
                   <Button
-                    onClick={() => createNewConversation('General Chat')}
+                    onClick={() => createNewConversation()}
                   >
                     Start New Chat
                   </Button>
@@ -529,12 +568,7 @@ Be helpful, concise, and proactive in suggesting actions.`
               </div>
             )}
 
-            {isProcessing && (
-              <div style={{ position: 'absolute', bottom: '4px', left: '4px', zIndex: 10 }}
-                   className="text-xs text-gray-500 bg-white px-2 py-1 rounded shadow border">
-                AI is processing...
-              </div>
-            )}
+            {/* Processing indicator now rendered inline as a message via messageTemplate */}
           </div>
         </div>
       )}

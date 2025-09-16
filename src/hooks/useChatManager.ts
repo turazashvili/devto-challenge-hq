@@ -18,6 +18,7 @@ export function useChatManager() {
     conversations: [],
     activeConversationId: null
   });
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Load conversations from localStorage on mount
   useEffect(() => {
@@ -41,7 +42,11 @@ export function useChatManager() {
         });
       } catch (error) {
         console.error('Failed to load chat conversations:', error);
+      } finally {
+        setIsHydrated(true);
       }
+    } else {
+      setIsHydrated(true);
     }
   }, []);
 
@@ -51,9 +56,10 @@ export function useChatManager() {
   }, []);
 
   const createNewConversation = useCallback((title?: string, challengeId?: string) => {
+    const nextIndexTitle = (count: number) => `Chat #${count + 1}`;
     const newConv: ChatConversation = {
       id: `chat_${Date.now()}`,
-      title: title || `Chat ${Date.now()}`,
+      title: title || nextIndexTitle(chatState.conversations.length),
       contextChallengeId: challengeId,
       messages: [
         {
@@ -131,6 +137,8 @@ export function useChatManager() {
   return {
     conversations: chatState.conversations,
     activeConversation: getActiveConversation(),
+    activeConversationId: chatState.activeConversationId,
+    isHydrated,
     createNewConversation,
     addMessage,
     setActiveConversation,

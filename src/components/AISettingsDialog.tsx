@@ -15,6 +15,7 @@ interface AISettingsDialogProps {
 export default function AISettingsDialog({ isOpen, onClose }: AISettingsDialogProps) {
   const { settings, models, isLoadingModels, updateSettings, refreshModels } = useAISettings();
   const [formData, setFormData] = React.useState(settings);
+  const [modelFilter, setModelFilter] = React.useState('');
 
   type InputChangeEvent = {
     target?: { value?: string | number | string[] };
@@ -54,6 +55,11 @@ export default function AISettingsDialog({ isOpen, onClose }: AISettingsDialogPr
   };
 
   const selectedModel = models.find(m => m.id === formData.selectedModel);
+  const filteredModels = React.useMemo(() => {
+    const query = modelFilter.trim().toLowerCase();
+    if (!query) return models;
+    return models.filter(m => (m.name || m.id).toLowerCase().includes(query));
+  }, [models, modelFilter]);
 
   if (!isOpen) return null;
 
@@ -97,13 +103,15 @@ export default function AISettingsDialog({ isOpen, onClose }: AISettingsDialogPr
             Model
           </label>
           <DropDownList
-            data={models}
+            data={filteredModels}
             textField="name"
             dataItemKey="id"
             value={selectedModel}
             onChange={handleModelChange}
             loading={isLoadingModels}
             className="w-full"
+            filterable
+            onFilterChange={(e) => setModelFilter(e.filter?.value || '')}
           />
           <div className="flex items-center justify-between mt-1">
             <p className="text-xs text-gray-500">

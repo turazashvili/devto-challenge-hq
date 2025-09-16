@@ -5,41 +5,86 @@ import { AISettings, AIModel, DEFAULT_AI_SETTINGS } from '../types/ai';
 
 const STORAGE_KEY = 'ai-settings';
 
+// Module-level shared store to keep settings in sync across hook consumers
+let settingsStore: AISettings = { ...DEFAULT_AI_SETTINGS };
+let isStoreHydrated = false;
+const subscribers = new Set<(next: AISettings) => void>();
+
+function notifySubscribers(next: AISettings) {
+  subscribers.forEach(cb => {
+    try { cb(next); } catch {}
+  });
+}
+
+function hydrateStoreFromLocalStorage() {
+  if (typeof window === 'undefined') return;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      settingsStore = {
+        ...DEFAULT_AI_SETTINGS,
+        ...parsed,
+        siteUrl: window?.location?.origin || ''
+      };
+    } catch (error) {
+      console.error('Failed to load AI settings:', error);
+    }
+  } else {
+    settingsStore = {
+      ...DEFAULT_AI_SETTINGS,
+      siteUrl: window?.location?.origin || ''
+    };
+  }
+  isStoreHydrated = true;
+}
+
+function updateSettingsStore(partial: Partial<AISettings>) {
+  const next = { ...settingsStore, ...partial };
+  settingsStore = next;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {}
+  notifySubscribers(settingsStore);
+}
+
+// Listen to cross-tab updates
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY && e.newValue) {
+      try {
+        const parsed = JSON.parse(e.newValue);
+        settingsStore = { ...DEFAULT_AI_SETTINGS, ...parsed };
+        notifySubscribers(settingsStore);
+      } catch {}
+    }
+  });
+}
+
 export function useAISettings() {
-  const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
+  // Ensure store is hydrated on first hook usage in this runtime
+  if (!isStoreHydrated && typeof window !== 'undefined') {
+    hydrateStoreFromLocalStorage();
+  }
+
+  const [settings, setSettings] = useState<AISettings>(settingsStore);
   const [models, setModels] = useState<AIModel[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
 
-  // Load settings from localStorage
+  // Subscribe to store updates
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setSettings({
-          ...DEFAULT_AI_SETTINGS,
-          ...parsed,
-          siteUrl: window?.location?.origin || ''
-        });
-      } catch (error) {
-        console.error('Failed to load AI settings:', error);
-      }
-    } else {
-      // Set default site URL on first load
-      setSettings(prev => ({
-        ...prev,
-        siteUrl: window?.location?.origin || ''
-      }));
-    }
+    const subscriber = (next: AISettings) => setSettings(next);
+    subscribers.add(subscriber);
+    // Sync immediately in case store changed before subscribe
+    setSettings(settingsStore);
+    return () => {
+      subscribers.delete(subscriber);
+    };
   }, []);
 
-  // Save settings to localStorage
+  // Save settings to shared store + localStorage
   const saveSettings = useCallback((newSettings: Partial<AISettings>) => {
-    setSettings(prevSettings => {
-      const updated = { ...prevSettings, ...newSettings };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+    updateSettingsStore(newSettings);
   }, []);
 
   // Fetch available models from OpenRouter
@@ -69,6 +114,9 @@ export function useAISettings() {
         pricing: model.pricing,
         context_length: model.context_length,
       }));
+
+      // Sort models alphabetically by display name (case-insensitive)
+      modelList.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id, undefined, { sensitivity: 'base' }));
 
       setModels(modelList);
     } catch (error) {
