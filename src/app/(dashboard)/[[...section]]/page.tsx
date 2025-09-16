@@ -80,6 +80,9 @@ const isResourceRow = (value: unknown): value is Resource =>
 const isTaskRow = (value: unknown): value is Task =>
   typeof value === 'object' && value !== null && 'challengeId' in value && 'status' in value;
 
+const isIdeaRow = (value: unknown): value is Idea =>
+  typeof value === 'object' && value !== null && 'impact' in value && 'tags' in value;
+
 type DialogType = "challenge" | "task" | "idea" | "resource" | null;
 
 interface ChallengeFormState {
@@ -169,7 +172,9 @@ export default function Home() {
     updateTaskStatus,
     updateTask,
     addIdea,
+    updateIdea,
     addResource,
+    updateResource,
     isReady,
   } = useTrackerData();
 
@@ -191,6 +196,8 @@ export default function Home() {
   const [selectedSection, setSelectedSection] = useState<Section>(currentSection);
   const [dialog, setDialog] = useState<DialogType>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
+  const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
 
   const [challengeForm, setChallengeForm] = useState<ChallengeFormState>(emptyChallenge);
   const [taskForm, setTaskForm] = useState<TaskFormState>(emptyTask);
@@ -228,6 +235,8 @@ export default function Home() {
     setIdeaForm(emptyIdea);
     setResourceForm(emptyResource);
     setEditingTaskId(null);
+    setEditingIdeaId(null);
+    setEditingResourceId(null);
   };
 
   const closeDialog = useCallback(() => {
@@ -253,6 +262,47 @@ export default function Home() {
       setDialog("task");
     },
     [setTaskForm, setEditingTaskId, setDialog],
+  );
+
+  const openIdeaDialog = useCallback(
+    (idea?: Idea) => {
+      if (idea) {
+        setIdeaForm({
+          challengeId: idea.challengeId,
+          title: idea.title,
+          impact: idea.impact,
+          notes: idea.notes,
+          tags: [...idea.tags],
+        });
+        setEditingIdeaId(idea.id);
+      } else {
+        setIdeaForm(emptyIdea);
+        setEditingIdeaId(null);
+      }
+      setDialog("idea");
+    },
+    [],
+  );
+
+  const openResourceDialog = useCallback(
+    (resource?: Resource) => {
+      if (resource) {
+        setResourceForm({
+          challengeId: resource.challengeId,
+          title: resource.title,
+          url: resource.url,
+          type: resource.type,
+          notes: resource.notes ?? "",
+          tags: [...resource.tags],
+        });
+        setEditingResourceId(resource.id);
+      } else {
+        setResourceForm(emptyResource);
+        setEditingResourceId(null);
+      }
+      setDialog("resource");
+    },
+    [],
   );
 
   const handleCreateChallenge = () => {
@@ -308,7 +358,17 @@ export default function Home() {
       tags: ideaForm.tags,
     };
 
-    addIdea(payload);
+    if (editingIdeaId) {
+      updateIdea(editingIdeaId, {
+        challengeId: payload.challengeId,
+        title: payload.title,
+        impact: payload.impact,
+        notes: payload.notes,
+        tags: payload.tags,
+      });
+    } else {
+      addIdea(payload);
+    }
     closeDialog();
   };
 
@@ -324,7 +384,18 @@ export default function Home() {
       tags: resourceForm.tags,
     };
 
-    addResource(payload);
+    if (editingResourceId) {
+      updateResource(editingResourceId, {
+        challengeId: payload.challengeId,
+        title: payload.title,
+        url: payload.url,
+        type: payload.type,
+        notes: payload.notes,
+        tags: payload.tags,
+      });
+    } else {
+      addResource(payload);
+    }
     closeDialog();
   };
 
@@ -382,22 +453,83 @@ export default function Home() {
         }
       }
 
+      if (isIdeaRow(dataItem)) {
+        if (field === "title") {
+          return (
+            <td>
+              <button
+                type="button"
+                onClick={() => openIdeaDialog(dataItem)}
+                className="w-full text-left text-sm font-semibold text-black underline-offset-4 hover:underline focus:outline-none"
+              >
+                {dataItem.title}
+              </button>
+            </td>
+          );
+        }
+
+        if (field === "challengeId") {
+          return (
+            <td className="text-sm text-neutral-600">
+              {dataItem.challengeId ? (
+                <Link
+                  href={getChallengeUrl(dataItem.challengeId)}
+                  className="font-semibold text-neutral-700 underline-offset-4 hover:underline"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {state.challenges.find((challenge) => challenge.id === dataItem.challengeId)?.title ??
+                    "Not found"}
+                </Link>
+              ) : (
+                "General"
+              )}
+            </td>
+          );
+        }
+
+        if (field === "impact") {
+          return <td className="text-sm text-neutral-600">{dataItem.impact}</td>;
+        }
+
+        if (field === "tags") {
+          return (
+            <td className="space-x-2 text-xs text-neutral-600">
+              {dataItem.tags.map((tag: string) => `#${tag}`).join("  ")}
+            </td>
+          );
+        }
+      }
+
       if (isResourceRow(dataItem)) {
         if (field === "title") {
           return (
-            <td className="text-sm">
-              <div className="flex flex-col">
-                <span className="font-semibold text-black">{dataItem.title}</span>
-                {dataItem.challengeId && (
-                  <Link
-                    href={getChallengeUrl(dataItem.challengeId)}
-                    className="text-xs font-semibold text-neutral-700 underline-offset-4 hover:underline"
-                  >
-                    {state.challenges.find((challenge) => challenge.id === dataItem.challengeId)?.title ??
-                      "Unknown"}
-                  </Link>
-                )}
-              </div>
+            <td>
+              <button
+                type="button"
+                onClick={() => openResourceDialog(dataItem)}
+                className="w-full text-left text-sm font-semibold text-black underline-offset-4 hover:underline focus:outline-none"
+              >
+                {dataItem.title}
+              </button>
+            </td>
+          );
+        }
+
+        if (field === "challengeId") {
+          return (
+            <td className="text-sm text-neutral-600">
+              {dataItem.challengeId ? (
+                <Link
+                  href={getChallengeUrl(dataItem.challengeId)}
+                  className="font-semibold text-neutral-700 underline-offset-4 hover:underline"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {state.challenges.find((challenge) => challenge.id === dataItem.challengeId)?.title ??
+                    "Not found"}
+                </Link>
+              ) : (
+                "General"
+              )}
             </td>
           );
         }
@@ -410,6 +542,7 @@ export default function Home() {
                 className="font-semibold text-neutral-700 underline-offset-4 hover:underline"
                 target="_blank"
                 rel="noreferrer"
+                onClick={(event) => event.stopPropagation()}
               >
                 Visit ↗
               </a>
@@ -499,7 +632,15 @@ export default function Home() {
 
       return <td {...tdProps} />;
     },
-    [state.challenges, updateChallengeStatus, updateTaskStatus, getChallengeUrl, openTaskDialog],
+    [
+      state.challenges,
+      updateChallengeStatus,
+      updateTaskStatus,
+      getChallengeUrl,
+      openTaskDialog,
+      openIdeaDialog,
+      openResourceDialog,
+    ],
   );
 
   useEffect(() => {
@@ -684,7 +825,19 @@ export default function Home() {
           </p>
           <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
             {state.ideas.slice(0, 4).map((idea) => (
-              <article key={idea.id} className="rounded-2xl border border-black/10 bg-white p-4">
+              <article
+                key={idea.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openIdeaDialog(idea)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openIdeaDialog(idea);
+                  }
+                }}
+                className="cursor-pointer rounded-2xl border border-black/10 bg-white p-4 transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
+              >
                 <header className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-base font-semibold text-black">{idea.title}</h3>
@@ -692,6 +845,7 @@ export default function Home() {
                       <Link
                         href={getChallengeUrl(idea.challengeId)}
                         className="text-xs font-semibold text-neutral-700 underline-offset-4 hover:underline"
+                        onClick={(event) => event.stopPropagation()}
                       >
                         {
                           state.challenges.find((challenge) => challenge.id === idea.challengeId)?.title ??
@@ -723,13 +877,26 @@ export default function Home() {
           <h2 className="text-lg font-semibold text-black">Resource vault</h2>
           <ul className="mt-4 space-y-3 text-sm text-neutral-700">
             {state.resources.slice(0, 5).map((resource) => (
-              <li key={resource.id} className="rounded-xl border border-black/10 bg-white p-3">
-                <p className="font-medium text-black">{resource.title}</p>
+              <li
+                key={resource.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openResourceDialog(resource)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openResourceDialog(resource);
+                  }
+                }}
+                className="cursor-pointer rounded-xl border border-black/10 bg-white p-3 transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
+              >
+                <p className="font-medium text-black break-words">{resource.title}</p>
                 <p className="mt-1 text-xs text-neutral-500">{resource.type}</p>
                 <a
                   href={resource.url}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={(event) => event.stopPropagation()}
                   className="mt-2 inline-flex text-xs font-semibold text-neutral-700 underline-offset-4 hover:underline"
                 >
                   View resource ↗
@@ -785,13 +952,25 @@ export default function Home() {
             Shape experiments, story arcs, and supporting assets for your DEV challenges.
           </p>
         </div>
-        <Button themeColor="primary" onClick={() => setDialog("idea")}>
+        <Button themeColor="primary" onClick={() => openIdeaDialog()}>
           Log idea
         </Button>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {state.ideas.map((idea) => (
-          <article key={idea.id} className={`${panelClass} p-5`}>
+          <article
+            key={idea.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => openIdeaDialog(idea)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openIdeaDialog(idea);
+              }
+            }}
+            className={`${panelClass} cursor-pointer p-5 transition-shadow hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-black/40`}
+          >
             <header className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold text-black">{idea.title}</h3>
@@ -799,6 +978,7 @@ export default function Home() {
                   <Link
                     href={getChallengeUrl(idea.challengeId)}
                     className="text-xs font-semibold text-neutral-700 underline-offset-4 hover:underline"
+                    onClick={(event) => event.stopPropagation()}
                   >
                     {state.challenges.find((challenge) => challenge.id === idea.challengeId)?.title ??
                       "Unknown"}
@@ -835,13 +1015,14 @@ export default function Home() {
             Keep the articles, tools, and references you revisit while crafting submissions.
           </p>
         </div>
-        <Button themeColor="primary" onClick={() => setDialog("resource")}>
+        <Button themeColor="primary" onClick={() => openResourceDialog()}>
           Add resource
         </Button>
       </div>
       <div className="overflow-hidden rounded-3xl border border-black/10 bg-white">
         <Grid data={state.resources} className="k-grid-neutral" cells={{ data: renderDataCell }}>
           <GridColumn field="title" title="Title" width="260px" />
+          <GridColumn field="challengeId" title="Challenge" width="240px" />
           <GridColumn field="type" title="Type" width="140px" />
           <GridColumn field="url" title="Link" />
           <GridColumn field="tags" title="Tags" width="220px" />
@@ -1049,7 +1230,7 @@ export default function Home() {
     if (dialog === "idea") {
       return (
         <Dialog
-          title="Log idea"
+          title={editingIdeaId ? "Edit idea" : "Log idea"}
           onClose={closeDialog}
           width={600}
           contentStyle={{ padding: 24, maxHeight: "70vh", overflowY: "auto" }}
@@ -1111,7 +1292,7 @@ export default function Home() {
               Cancel
             </Button>
             <Button themeColor="primary" onClick={handleCreateIdea}>
-              Save idea
+              {editingIdeaId ? "Save changes" : "Save idea"}
             </Button>
           </DialogActionsBar>
         </Dialog>
@@ -1121,7 +1302,7 @@ export default function Home() {
     if (dialog === "resource") {
       return (
         <Dialog
-          title="Add resource"
+          title={editingResourceId ? "Edit resource" : "Add resource"}
           onClose={closeDialog}
           width={600}
           contentStyle={{ padding: 24, maxHeight: "70vh", overflowY: "auto" }}
@@ -1190,7 +1371,7 @@ export default function Home() {
               Cancel
             </Button>
             <Button themeColor="primary" onClick={handleCreateResource}>
-              Save resource
+              {editingResourceId ? "Save changes" : "Save resource"}
             </Button>
           </DialogActionsBar>
         </Dialog>
@@ -1216,8 +1397,8 @@ export default function Home() {
         <AppBarSection>
           <ButtonGroup>
             <Button onClick={() => setDialog("challenge")}>Challenge</Button>
-            <Button onClick={() => setDialog("idea")}>Idea</Button>
-            <Button onClick={() => setDialog("resource")}>Resource</Button>
+            <Button onClick={() => openIdeaDialog()}>Idea</Button>
+            <Button onClick={() => openResourceDialog()}>Resource</Button>
             <Button onClick={() => openTaskDialog()}>Task</Button>
           </ButtonGroup>
         </AppBarSection>
