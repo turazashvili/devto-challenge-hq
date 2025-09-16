@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { tagSuggestions } from "@/data/tagSuggestions";
-import { useTrackerData } from "@/lib/useTrackerData";
+import { useTrackerContext } from "@/context/TrackerContext";
 import type {
   Challenge,
   ChallengeStatus,
@@ -179,7 +179,7 @@ export default function Home() {
     updateResource,
     removeResource,
     isReady,
-  } = useTrackerData();
+  } = useTrackerContext();
 
   // Determine current section from URL
   const currentSection = useMemo(() => {

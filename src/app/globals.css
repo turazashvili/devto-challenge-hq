@@ -10,12 +10,7 @@
   --kendo-color-secondary-text: #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* Removed @theme inline rule to prevent conflicts with Kendo Chat */
 
 body {
   background: var(--background);

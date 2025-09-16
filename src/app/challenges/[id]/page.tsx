@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { tagSuggestions } from "@/data/tagSuggestions";
-import { useTrackerData } from "@/lib/useTrackerData";
+import { useTrackerContext } from "@/context/TrackerContext";
 import type {
   ChallengeStatus,
   CreateIdeaInput,
@@ -153,7 +153,7 @@ export default function ChallengeDetailPage() {
     removeResource,
     removeChallenge,
     isReady,
-  } = useTrackerData();
+  } = useTrackerContext();
 
   const challenge = useMemo(
     () => state.challenges.find((item) => item.id === challengeId),
