@@ -57,6 +57,7 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
   // const [streamingText, setStreamingText] = React.useState('');
   const [windowWidth, setWindowWidth] = React.useState(0);
   const [windowHeight, setWindowHeight] = React.useState(0);
+  const [searchEnabled, setSearchEnabled] = React.useState(false);
 
   // Handle responsive sizing
   React.useEffect(() => {
@@ -182,12 +183,19 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
       // setStreamingText('');
       const currentStreamText = '';
 
+      const rawModelId = settings.selectedModel || '';
+      const normalizedModelId = rawModelId.replace(/:online$/i, '');
+      const effectiveSettings = {
+        ...settings,
+        selectedModel: `${normalizedModelId}${searchEnabled ? ':online' : ''}`,
+      };
+
       const aiResponse = await aiService.processMessage(
         userMessage.text || '',
         activeConversation.messages,
         context.challengeId,
         { challengeId: currentChallengeId || activeConversation.contextChallengeId },
-        settings,
+        effectiveSettings,
         // Disable streaming to test tool calling
         undefined
       );
@@ -346,7 +354,7 @@ Be helpful, concise, and proactive in suggesting actions.`
         // Step 3: Continue conversation with tool results
         const finalResponse = await aiService.continueWithToolResults(
           conversationMessages,
-          settings,
+          effectiveSettings,
           // Disable streaming to test tool calling
           undefined
         );
@@ -455,17 +463,28 @@ Be helpful, concise, and proactive in suggesting actions.`
                   ×
                 </button>
               )}
-              <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="bg-blue-500 hover:bg-blue-400 px-2 py-1 rounded text-xs"
-                title="AI Settings"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-            </div>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="bg-blue-500 hover:bg-blue-400 px-2 py-1 rounded text-xs"
+              title="AI Settings"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setSearchEnabled((prev) => !prev)}
+              className={`px-2 py-1 rounded text-xs transition-colors ${
+                searchEnabled
+                  ? 'bg-amber-400 hover:bg-amber-300 text-black'
+                  : 'bg-blue-500 hover:bg-blue-400 text-white'
+              }`}
+              title="Toggle web search"
+            >
+              {searchEnabled ? 'Web search on' : 'Web search off'}
+            </button>
+          </div>
             <button
               onClick={() => setIsOpen(false)}
               className="text-white hover:text-gray-200"

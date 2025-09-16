@@ -60,7 +60,7 @@ export class AIService {
           content: `You are an AI assistant for a dev challenge tracker. You can help users manage their challenges, tasks, ideas, and resources.
 
 Available functions:
-- createChallenge: Create a new challenge
+- createChallenge: Create a new challenge (make sure the description will include all details about this challenge provided either by user or by you scraping the link they sent. focus on the challenge when putting description. no other info)
 - addTask: Add a task to a challenge
 - addIdea: Add an idea to a challenge
 - addResource: Add a resource to a challenge
