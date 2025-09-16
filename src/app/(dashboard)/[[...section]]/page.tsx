@@ -49,6 +49,13 @@ const taskStatuses: Task["status"][] = [
   "Done",
 ];
 
+const taskProgressByStatus: Record<Task["status"], number> = {
+  "Not Started": 10,
+  "In Progress": 60,
+  Blocked: 30,
+  Done: 100,
+};
+
 const ideaImpactOptions: Idea["impact"][] = [
   "Quick Win",
   "High Impact",
@@ -160,6 +167,7 @@ export default function Home() {
     updateChallengeStatus,
     addTask,
     updateTaskStatus,
+    updateTask,
     addIdea,
     addResource,
     isReady,
@@ -182,6 +190,7 @@ export default function Home() {
 
   const [selectedSection, setSelectedSection] = useState<Section>(currentSection);
   const [dialog, setDialog] = useState<DialogType>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const [challengeForm, setChallengeForm] = useState<ChallengeFormState>(emptyChallenge);
   const [taskForm, setTaskForm] = useState<TaskFormState>(emptyTask);
@@ -218,12 +227,33 @@ export default function Home() {
     setTaskForm(emptyTask);
     setIdeaForm(emptyIdea);
     setResourceForm(emptyResource);
+    setEditingTaskId(null);
   };
 
   const closeDialog = useCallback(() => {
     setDialog(null);
     resetDialogState();
   }, []);
+
+  const openTaskDialog = useCallback(
+    (task?: Task) => {
+      if (task) {
+        setTaskForm({
+          challengeId: task.challengeId,
+          title: task.title,
+          status: task.status,
+          dueDate: task.dueDate ? new Date(task.dueDate) : null,
+          notes: task.notes ?? "",
+        });
+        setEditingTaskId(task.id);
+      } else {
+        setTaskForm(emptyTask);
+        setEditingTaskId(null);
+      }
+      setDialog("task");
+    },
+    [setTaskForm, setEditingTaskId, setDialog],
+  );
 
   const handleCreateChallenge = () => {
     if (!challengeForm.title.trim()) return;
@@ -252,7 +282,18 @@ export default function Home() {
       notes: taskForm.notes.trim() || undefined,
     };
 
-    addTask(payload);
+    if (editingTaskId) {
+      updateTask(editingTaskId, {
+        challengeId: payload.challengeId,
+        title: payload.title,
+        status: payload.status,
+        dueDate: payload.dueDate,
+        notes: payload.notes,
+      });
+    } else {
+      addTask(payload);
+    }
+
     closeDialog();
   };
 
@@ -386,6 +427,20 @@ export default function Home() {
       }
 
       if (isTaskRow(dataItem)) {
+        if (field === "title") {
+          return (
+            <td>
+              <button
+                type="button"
+                onClick={() => openTaskDialog(dataItem)}
+                className="w-full text-left text-sm font-semibold text-black underline-offset-4 hover:underline focus:outline-none"
+              >
+                {dataItem.title}
+              </button>
+            </td>
+          );
+        }
+
         if (field === "challengeId") {
           return (
             <td className="text-sm text-neutral-600">
@@ -417,9 +472,19 @@ export default function Home() {
         }
 
         if (field === "dueDate") {
+          const label = dataItem.dueDate
+            ? new Date(dataItem.dueDate).toLocaleDateString()
+            : "—";
+
           return (
             <td className="text-sm text-neutral-600">
-              {dataItem.dueDate ? new Date(dataItem.dueDate).toLocaleDateString() : "—"}
+              <button
+                type="button"
+                onClick={() => openTaskDialog(dataItem)}
+                className="w-full text-left underline-offset-4 hover:underline focus:outline-none"
+              >
+                {label}
+              </button>
             </td>
           );
         }
@@ -434,7 +499,7 @@ export default function Home() {
 
       return <td {...tdProps} />;
     },
-    [state.challenges, updateChallengeStatus, updateTaskStatus, getChallengeUrl],
+    [state.challenges, updateChallengeStatus, updateTaskStatus, getChallengeUrl, openTaskDialog],
   );
 
   useEffect(() => {
@@ -511,8 +576,8 @@ export default function Home() {
           </div>
           <div className="mt-5 space-y-4">
             {upcoming.map((challenge) => (
-              <div key={challenge.id} className="rounded-2xl border border-black/10 bg-white p-4">
-                <div className="flex items-center justify-between">
+              <div key={challenge.id} className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <Link
                       href={getChallengeUrl(challenge.id)}
@@ -526,9 +591,16 @@ export default function Home() {
                       </p>
                     )}
                   </div>
-                  <span className="badge-muted">{challenge.status}</span>
+                  <span className="badge-muted flex-shrink-0 px-4 py-1 text-xs">
+                    {challenge.status}
+                  </span>
                 </div>
-                <ProgressBar value={challenge.progress} style={{ marginTop: "14px", height: 6 }} />
+                <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-black/10">
+                  <div
+                    className="h-full rounded-full bg-black transition-all"
+                    style={{ width: `${challenge.progress}%` }}
+                  />
+                </div>
               </div>
             ))}
             {upcoming.length === 0 && (
@@ -546,36 +618,53 @@ export default function Home() {
               Prioritise flow
             </span>
           </div>
-          <ul className="mt-5 space-y-4">
+          <div className="mt-5 space-y-4">
             {upcomingTasks.map((task) => {
               const challenge = state.challenges.find((item) => item.id === task.challengeId);
+              const progress = taskProgressByStatus[task.status] ?? 0;
+
               return (
-                <li
+                <div
                   key={task.id}
-                  className="flex flex-col justify-between gap-3 rounded-2xl border border-black/10 bg-white p-4 md:flex-row md:items-center"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openTaskDialog(task)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openTaskDialog(task);
+                    }
+                  }}
+                  className="cursor-pointer rounded-2xl border border-black/10 bg-white p-5 shadow-sm transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-black">{task.title}</p>
-                    <div className="mt-1 flex flex-wrap gap-3 text-xs text-neutral-600">
-                      <span className="badge-muted text-white">{task.status}</span>
-                      {task.dueDate && <span>Due {new Date(task.dueDate).toLocaleDateString()}</span>}
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-black">{task.title}</p>
+                      {task.dueDate && (
+                        <p className="text-xs text-neutral-600">
+                          Due {new Date(task.dueDate).toLocaleDateString()}
+                        </p>
+                      )}
                       {challenge && (
                         <Link
                           href={getChallengeUrl(challenge.id)}
-                          className="font-semibold text-neutral-700 underline-offset-4 hover:underline"
+                          className="text-xs font-semibold text-neutral-700 underline-offset-4 hover:underline"
+                          onClick={(event) => event.stopPropagation()}
                         >
                           {challenge.title}
                         </Link>
                       )}
                     </div>
+                    <span className="badge-muted flex-shrink-0 px-4 py-1 text-xs">{task.status}</span>
                   </div>
-                  <DropDownList
-                    data={taskStatuses}
-                    value={task.status}
-                    onChange={(event) => updateTaskStatus(task.id, event.value)}
-                    style={{ width: 180 }}
-                  />
-                </li>
+                  <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-black/10">
+                    <div
+                      className="h-full rounded-full bg-black transition-all"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
               );
             })}
             {upcomingTasks.length === 0 && (
@@ -583,7 +672,7 @@ export default function Home() {
                 You&apos;re all caught up. Create a fresh task to keep the momentum.
               </p>
             )}
-          </ul>
+          </div>
         </div>
       </section>
 
@@ -770,7 +859,7 @@ export default function Home() {
             Break down each challenge into steps. Status updates keep progress honest.
           </p>
         </div>
-        <Button themeColor="primary" onClick={() => setDialog("task")}>
+        <Button themeColor="primary" onClick={() => openTaskDialog()}>
           Add task
         </Button>
       </div>
@@ -889,7 +978,7 @@ export default function Home() {
     if (dialog === "task") {
       return (
         <Dialog
-          title="Add task"
+          title={editingTaskId ? "Edit task" : "Add task"}
           onClose={closeDialog}
           width={600}
           contentStyle={{ padding: 24, maxHeight: "70vh", overflowY: "auto" }}
@@ -950,7 +1039,7 @@ export default function Home() {
               Cancel
             </Button>
             <Button themeColor="primary" onClick={handleCreateTask}>
-              Save task
+              {editingTaskId ? "Save changes" : "Save task"}
             </Button>
           </DialogActionsBar>
         </Dialog>
@@ -1129,7 +1218,7 @@ export default function Home() {
             <Button onClick={() => setDialog("challenge")}>Challenge</Button>
             <Button onClick={() => setDialog("idea")}>Idea</Button>
             <Button onClick={() => setDialog("resource")}>Resource</Button>
-            <Button onClick={() => setDialog("task")}>Task</Button>
+            <Button onClick={() => openTaskDialog()}>Task</Button>
           </ButtonGroup>
         </AppBarSection>
       </AppBar>
