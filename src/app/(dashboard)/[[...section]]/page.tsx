@@ -171,10 +171,13 @@ export default function Home() {
     addTask,
     updateTaskStatus,
     updateTask,
+    removeTask,
     addIdea,
     updateIdea,
+    removeIdea,
     addResource,
     updateResource,
+    removeResource,
     isReady,
   } = useTrackerData();
 
@@ -347,6 +350,12 @@ export default function Home() {
     closeDialog();
   };
 
+  const handleDeleteTask = () => {
+    if (!editingTaskId) return;
+    removeTask(editingTaskId);
+    closeDialog();
+  };
+
   const handleCreateIdea = () => {
     if (!ideaForm.title.trim()) return;
 
@@ -369,6 +378,12 @@ export default function Home() {
     } else {
       addIdea(payload);
     }
+    closeDialog();
+  };
+
+  const handleDeleteIdea = () => {
+    if (!editingIdeaId) return;
+    removeIdea(editingIdeaId);
     closeDialog();
   };
 
@@ -396,6 +411,12 @@ export default function Home() {
     } else {
       addResource(payload);
     }
+    closeDialog();
+  };
+
+  const handleDeleteResource = () => {
+    if (!editingResourceId) return;
+    removeResource(editingResourceId);
     closeDialog();
   };
 
@@ -1219,6 +1240,15 @@ export default function Home() {
             <Button fillMode="flat" onClick={closeDialog}>
               Cancel
             </Button>
+            {editingTaskId && (
+              <Button
+                fillMode="flat"
+                className="text-red-600"
+                onClick={handleDeleteTask}
+              >
+                Delete
+              </Button>
+            )}
             <Button themeColor="primary" onClick={handleCreateTask}>
               {editingTaskId ? "Save changes" : "Save task"}
             </Button>
@@ -1291,6 +1321,15 @@ export default function Home() {
             <Button fillMode="flat" onClick={closeDialog}>
               Cancel
             </Button>
+            {editingIdeaId && (
+              <Button
+                fillMode="flat"
+                className="text-red-600"
+                onClick={handleDeleteIdea}
+              >
+                Delete
+              </Button>
+            )}
             <Button themeColor="primary" onClick={handleCreateIdea}>
               {editingIdeaId ? "Save changes" : "Save idea"}
             </Button>
@@ -1370,6 +1409,15 @@ export default function Home() {
             <Button fillMode="flat" onClick={closeDialog}>
               Cancel
             </Button>
+            {editingResourceId && (
+              <Button
+                fillMode="flat"
+                className="text-red-600"
+                onClick={handleDeleteResource}
+              >
+                Delete
+              </Button>
+            )}
             <Button themeColor="primary" onClick={handleCreateResource}>
               {editingResourceId ? "Save changes" : "Save resource"}
             </Button>

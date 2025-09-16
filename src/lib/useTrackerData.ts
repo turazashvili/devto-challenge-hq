@@ -161,6 +161,13 @@ export function useTrackerData() {
     }));
   };
 
+  const removeTask = (id: string) => {
+    setState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.filter((task) => task.id !== id),
+    }));
+  };
+
   const addIdea = (payload: CreateIdeaInput) => {
     setState((prev) => ({
       ...prev,
@@ -185,6 +192,13 @@ export function useTrackerData() {
             }
           : idea,
       ),
+    }));
+  };
+
+  const removeIdea = (id: string) => {
+    setState((prev) => ({
+      ...prev,
+      ideas: prev.ideas.filter((idea) => idea.id !== id),
     }));
   };
 
@@ -218,6 +232,22 @@ export function useTrackerData() {
     }));
   };
 
+  const removeResource = (id: string) => {
+    setState((prev) => ({
+      ...prev,
+      resources: prev.resources.filter((resource) => resource.id !== id),
+    }));
+  };
+
+  const removeChallenge = (id: string) => {
+    setState((prev) => ({
+      challenges: prev.challenges.filter((challenge) => challenge.id !== id),
+      tasks: prev.tasks.filter((task) => task.challengeId !== id),
+      ideas: prev.ideas.filter((idea) => idea.challengeId !== id),
+      resources: prev.resources.filter((resource) => resource.challengeId !== id),
+    }));
+  };
+
   const derived = useMemo(() => {
     const upcomingChallenges = sortByDate(state.challenges.filter(Boolean));
     const upcomingTasks = sortByDate(state.tasks.filter(Boolean));
@@ -246,10 +276,14 @@ export function useTrackerData() {
     addTask,
     updateTaskStatus,
     updateTask,
+    removeTask,
     addIdea,
     updateIdea,
+    removeIdea,
     addResource,
     updateResource,
+    removeResource,
+    removeChallenge,
     derived,
     isReady,
   };

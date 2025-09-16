@@ -148,6 +148,10 @@ export default function ChallengeDetailPage() {
     addIdea,
     updateResource,
     addResource,
+    removeTask,
+    removeIdea,
+    removeResource,
+    removeChallenge,
     isReady,
   } = useTrackerData();
 
@@ -177,6 +181,7 @@ export default function ChallengeDetailPage() {
   const [resourceForm, setResourceForm] = useState<ResourceFormState>(emptyResource);
   const [challengeForm, setChallengeForm] =
     useState<ChallengeFormState>(emptyChallengeForm);
+  const [confirmDeleteChallenge, setConfirmDeleteChallenge] = useState(false);
 
   const handleBackNavigation = useCallback(() => {
     const returnTo = searchParams?.get('returnTo');
@@ -351,6 +356,35 @@ const handleCardKeyDown = (
     closeDialog();
   };
 
+  const handleDeleteTask = () => {
+    if (dialog?.type === "task" && dialog.mode === "edit" && dialog.itemId) {
+      removeTask(dialog.itemId);
+      closeDialog();
+    }
+  };
+
+  const handleDeleteIdea = () => {
+    if (dialog?.type === "idea" && dialog.mode === "edit" && dialog.itemId) {
+      removeIdea(dialog.itemId);
+      closeDialog();
+    }
+  };
+
+  const handleDeleteResource = () => {
+    if (dialog?.type === "resource" && dialog.mode === "edit" && dialog.itemId) {
+      removeResource(dialog.itemId);
+      closeDialog();
+    }
+  };
+
+  const handleDeleteChallenge = () => {
+    if (!challenge) return;
+    removeChallenge(challenge.id);
+    setConfirmDeleteChallenge(false);
+    setDialog(null);
+    router.push("/");
+  };
+
   const handleSaveChallenge = () => {
     if (!challengeId || !challengeForm.title.trim()) return;
 
@@ -449,6 +483,13 @@ const handleCardKeyDown = (
             <Button fillMode="flat" onClick={closeDialog}>
               Cancel
             </Button>
+            <Button
+              fillMode="flat"
+              className="text-red-600"
+              onClick={() => setConfirmDeleteChallenge(true)}
+            >
+              Delete challenge
+            </Button>
             <Button themeColor="primary" onClick={handleSaveChallenge}>
               Save changes
             </Button>
@@ -508,6 +549,11 @@ const handleCardKeyDown = (
             <Button fillMode="flat" onClick={closeDialog}>
               Cancel
             </Button>
+            {dialog.mode === "edit" && (
+              <Button fillMode="flat" className="text-red-600" onClick={handleDeleteTask}>
+                Delete task
+              </Button>
+            )}
             <Button themeColor="primary" onClick={handleSaveTask}>
               {dialog.mode === "edit" ? "Update task" : "Save task"}
             </Button>
@@ -565,6 +611,11 @@ const handleCardKeyDown = (
             <Button fillMode="flat" onClick={closeDialog}>
               Cancel
             </Button>
+            {dialog.mode === "edit" && (
+              <Button fillMode="flat" className="text-red-600" onClick={handleDeleteIdea}>
+                Delete idea
+              </Button>
+            )}
             <Button themeColor="primary" onClick={handleSaveIdea}>
               {dialog.mode === "edit" ? "Update idea" : "Save idea"}
             </Button>
@@ -630,6 +681,11 @@ const handleCardKeyDown = (
             <Button fillMode="flat" onClick={closeDialog}>
               Cancel
             </Button>
+            {dialog.mode === "edit" && (
+              <Button fillMode="flat" className="text-red-600" onClick={handleDeleteResource}>
+                Delete resource
+              </Button>
+            )}
             <Button themeColor="primary" onClick={handleSaveResource}>
               {dialog.mode === "edit" ? "Update resource" : "Save resource"}
             </Button>
@@ -969,6 +1025,29 @@ const handleCardKeyDown = (
       </main>
 
       {renderDialog()}
+      {confirmDeleteChallenge && challenge && (
+        <Dialog
+          title="Delete challenge"
+          onClose={() => setConfirmDeleteChallenge(false)}
+          width={420}
+        >
+          <div className="space-y-3 text-sm text-neutral-700">
+            <p>
+              You're about to delete <strong>{challenge.title}</strong> and all of its related tasks,
+              ideas, and resources. This action cannot be undone.
+            </p>
+            <p>Are you sure you want to continue?</p>
+          </div>
+          <DialogActionsBar>
+            <Button fillMode="flat" onClick={() => setConfirmDeleteChallenge(false)}>
+              Cancel
+            </Button>
+            <Button themeColor="primary" className="bg-red-600" onClick={handleDeleteChallenge}>
+              Delete challenge
+            </Button>
+          </DialogActionsBar>
+        </Dialog>
+      )}
     </div>
   );
 }
