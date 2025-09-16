@@ -86,7 +86,7 @@ const AI_FUNCTIONS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, conversationHistory, contextChallengeId } = await request.json();
+    const { message, contextChallengeId } = await request.json();
 
     // For now, return a mock response since we don't have OpenAI API key
     // In production, this would call OpenAI API with function calling
@@ -95,9 +95,9 @@ export async function POST(request: NextRequest) {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Mock response that demonstrates function calling
-    let response: any = {
+    const response: {role: string, content: string, function_call?: {name: string, arguments: string}} = {
       role: 'assistant',
-      content: null
+      content: ''
     };
 
     // Simple pattern matching for demo purposes

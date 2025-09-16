@@ -62,7 +62,7 @@ export function useAISettings() {
       }
 
       const data = await response.json();
-      const modelList: AIModel[] = data.data.map((model: any) => ({
+      const modelList: AIModel[] = data.data.map((model: {id: string, name?: string, description?: string, pricing?: unknown, context_length?: number}) => ({
         id: model.id,
         name: model.name || model.id,
         description: model.description,

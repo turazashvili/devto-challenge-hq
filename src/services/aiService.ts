@@ -1,7 +1,5 @@
 import OpenAI from 'openai';
 import { Message } from '@progress/kendo-react-conversational-ui';
-import { TrackerState } from '../types/tracker';
-import { AIFunction } from '../types/chat';
 import { AISettings } from '../types/ai';
 
 export class AIService {
@@ -38,12 +36,12 @@ export class AIService {
     message: string,
     conversationHistory: Message[],
     contextChallengeId?: string,
-    currentPageContext?: any,
+    currentPageContext?: Record<string, unknown>,
     settings?: AISettings,
     onStream?: (chunk: string) => void
   ): Promise<{
     response: string;
-    toolCalls?: any[];
+    toolCalls?: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[];
     needsToolExecution?: boolean;
   }> {
     if (!settings?.apiKey) {
@@ -100,7 +98,7 @@ Be helpful, concise, and proactive in suggesting actions.`
         let fullResponse = '';
         console.log('DEBUG - selectedModel type:', typeof settings.selectedModel);
         console.log('DEBUG - selectedModel value:', settings.selectedModel);
-        const modelId = typeof settings.selectedModel === 'string' ? settings.selectedModel : (settings.selectedModel as any)?.id || settings.selectedModel;
+        const modelId = typeof settings.selectedModel === 'string' ? settings.selectedModel : (settings.selectedModel as {id: string})?.id || settings.selectedModel;
         console.log('DEBUG - using modelId:', modelId);
         const stream = await openai.chat.completions.create({
           model: modelId,
@@ -130,7 +128,7 @@ Be helpful, concise, and proactive in suggesting actions.`
         // Non-streaming response
         console.log('DEBUG - selectedModel type:', typeof settings.selectedModel);
         console.log('DEBUG - selectedModel value:', settings.selectedModel);
-        const modelId = typeof settings.selectedModel === 'string' ? settings.selectedModel : (settings.selectedModel as any)?.id || settings.selectedModel;
+        const modelId = typeof settings.selectedModel === 'string' ? settings.selectedModel : (settings.selectedModel as {id: string})?.id || settings.selectedModel;
         console.log('DEBUG - using modelId:', modelId);
         const completion = await openai.chat.completions.create({
           model: modelId,
@@ -140,7 +138,7 @@ Be helpful, concise, and proactive in suggesting actions.`
         });
 
         const choice = completion.choices[0];
-        let functionCalls: AIFunction[] = [];
+        // const functionCalls: AIFunction[] = [];
 
         console.log('DEBUG - Model response:', choice.message);
         console.log('DEBUG - Tool calls found:', !!choice.message.tool_calls);
@@ -180,7 +178,7 @@ Be helpful, concise, and proactive in suggesting actions.`
       // Define tools again (required by OpenRouter)
       const tools = this.getToolsDefinition();
 
-      const modelId = typeof settings.selectedModel === 'string' ? settings.selectedModel : (settings.selectedModel as any)?.id || settings.selectedModel;
+      const modelId = typeof settings.selectedModel === 'string' ? settings.selectedModel : (settings.selectedModel as {id: string})?.id || settings.selectedModel;
 
       if (onStream) {
         let fullResponse = '';
@@ -300,8 +298,8 @@ Be helpful, concise, and proactive in suggesting actions.`
   determineContext(
     message: string,
     conversationHistory: Message[],
-    availableChallenges: any[],
-    currentPageContext?: any
+    availableChallenges: Array<{id: string, title: string, status: string}>,
+    currentPageContext?: Record<string, unknown>
   ): {
     challengeId?: string;
     needsClarification: boolean;
@@ -311,14 +309,14 @@ Be helpful, concise, and proactive in suggesting actions.`
 
     // Check if user is on a specific challenge page
     if (currentPageContext?.challengeId) {
-      return { challengeId: currentPageContext.challengeId, needsClarification: false };
+      return { challengeId: String(currentPageContext.challengeId), needsClarification: false };
     }
 
     // Look for explicit challenge references in the message
-    const challengeKeywords = ['challenge', 'project'];
-    const hasExplicitReference = challengeKeywords.some(keyword =>
-      messageText.includes(keyword)
-    );
+    // const challengeKeywords = ['challenge', 'project'];
+    // const hasExplicitReference = challengeKeywords.some(keyword =>
+    //   messageText.includes(keyword)
+    // );
 
     // Check conversation history for recent challenge mentions
     const recentChallengeContext = this.findRecentChallengeContext(conversationHistory);

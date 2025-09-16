@@ -1033,7 +1033,7 @@ const handleCardKeyDown = (
         >
           <div className="space-y-3 text-sm text-neutral-700">
             <p>
-              You're about to delete <strong>{challenge.title}</strong> and all of its related tasks,
+              You&apos;re about to delete <strong>{challenge.title}</strong> and all of its related tasks,
               ideas, and resources. This action cannot be undone.
             </p>
             <p>Are you sure you want to continue?</p>

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Challenge, Task, Idea, Resource, TrackerState, CreateChallengeInput, CreateTaskInput, CreateIdeaInput, CreateResourceInput } from '../types/tracker';
+import { Challenge, Task, Idea, Resource, TrackerState } from '../types/tracker';
 import { AIFunction } from '../types/chat';
 
 export class FunctionExecutor {
@@ -72,19 +72,19 @@ export class FunctionExecutor {
   }
 
   private createChallenge(
-    params: any,
+    params: Record<string, unknown>,
     currentState: TrackerState,
     updateState: (newState: TrackerState) => void
   ): string {
     const newChallenge: Challenge = {
       id: uuidv4(),
-      title: params.title,
-      theme: params.theme,
-      description: params.description,
+      title: params.title as string,
+      theme: params.theme as string,
+      description: params.description as string,
       status: 'Ideation',
       progress: 0,
-      deadline: params.deadline,
-      tags: params.tags || []
+      deadline: params.deadline as string | undefined,
+      tags: (params.tags as string[]) || []
     };
 
     const newState = {
@@ -97,17 +97,17 @@ export class FunctionExecutor {
   }
 
   private addTask(
-    params: any,
+    params: Record<string, unknown>,
     currentState: TrackerState,
     updateState: (newState: TrackerState) => void
   ): string {
     const newTask: Task = {
       id: uuidv4(),
-      challengeId: params.challengeId,
-      title: params.title,
+      challengeId: params.challengeId as string | undefined,
+      title: params.title as string,
       status: 'Not Started',
-      dueDate: params.dueDate,
-      notes: params.notes
+      dueDate: params.dueDate as string | undefined,
+      notes: params.notes as string | undefined
     };
 
     const newState = {
@@ -125,17 +125,17 @@ export class FunctionExecutor {
   }
 
   private addIdea(
-    params: any,
+    params: Record<string, unknown>,
     currentState: TrackerState,
     updateState: (newState: TrackerState) => void
   ): string {
     const newIdea: Idea = {
       id: uuidv4(),
-      challengeId: params.challengeId,
-      title: params.title,
-      impact: params.impact,
-      notes: params.notes,
-      tags: params.tags || []
+      challengeId: params.challengeId as string | undefined,
+      title: params.title as string,
+      impact: params.impact as 'Quick Win' | 'High Impact' | 'Foundational',
+      notes: params.notes as string,
+      tags: (params.tags as string[]) || []
     };
 
     const newState = {
@@ -153,18 +153,18 @@ export class FunctionExecutor {
   }
 
   private addResource(
-    params: any,
+    params: Record<string, unknown>,
     currentState: TrackerState,
     updateState: (newState: TrackerState) => void
   ): string {
     const newResource: Resource = {
       id: uuidv4(),
-      challengeId: params.challengeId,
-      title: params.title,
-      url: params.url,
-      type: params.type,
-      notes: params.notes,
-      tags: params.tags || []
+      challengeId: params.challengeId as string | undefined,
+      title: params.title as string,
+      url: params.url as string,
+      type: params.type as 'Article' | 'Video' | 'Tool' | 'Snippet' | 'Thread',
+      notes: params.notes as string | undefined,
+      tags: (params.tags as string[]) || []
     };
 
     const newState = {
@@ -193,16 +193,17 @@ export class FunctionExecutor {
     return `Here are your challenges:\n${challengeList}`;
   }
 
-  private getChallengeDetails(params: any, currentState: TrackerState): string {
-    const challenge = currentState.challenges.find(c => c.id === params.challengeId);
+  private getChallengeDetails(params: Record<string, unknown>, currentState: TrackerState): string {
+    const challengeId = params.challengeId as string;
+    const challenge = currentState.challenges.find(c => c.id === challengeId);
 
     if (!challenge) {
-      return `Challenge with ID "${params.challengeId}" not found.`;
+      return `Challenge with ID "${challengeId}" not found.`;
     }
 
-    const tasks = currentState.tasks.filter(t => t.challengeId === params.challengeId);
-    const ideas = currentState.ideas.filter(i => i.challengeId === params.challengeId);
-    const resources = currentState.resources.filter(r => r.challengeId === params.challengeId);
+    const tasks = currentState.tasks.filter(t => t.challengeId === challengeId);
+    const ideas = currentState.ideas.filter(i => i.challengeId === challengeId);
+    const resources = currentState.resources.filter(r => r.challengeId === challengeId);
 
     return `Challenge: "${challenge.title}"
 Status: ${challenge.status} (${challenge.progress}% complete)

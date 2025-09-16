@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Dialog } from '@progress/kendo-react-dialogs';
-import { Input, TextArea } from '@progress/kendo-react-inputs';
+import { Input } from '@progress/kendo-react-inputs';
 import { Button } from '@progress/kendo-react-buttons';
 import { DropDownList } from '@progress/kendo-react-dropdowns';
 import { useAISettings } from '../hooks/useAISettings';
@@ -16,6 +16,11 @@ export default function AISettingsDialog({ isOpen, onClose }: AISettingsDialogPr
   const { settings, models, isLoadingModels, updateSettings, refreshModels } = useAISettings();
   const [formData, setFormData] = React.useState(settings);
 
+  type InputChangeEvent = {
+    target?: { value?: string | number | string[] };
+    value?: string | number | string[];
+  };
+
   // Update form when settings change
   React.useEffect(() => {
     setFormData(settings);
@@ -26,15 +31,22 @@ export default function AISettingsDialog({ isOpen, onClose }: AISettingsDialogPr
     onClose();
   };
 
-  const handleInputChange = (field: keyof typeof formData) => (e: any) => {
+  const handleInputChange = (field: keyof typeof formData) => (e: InputChangeEvent) => {
+    const rawValue = e.target?.value ?? e.value ?? '';
+    const nextValue = Array.isArray(rawValue)
+      ? rawValue.join(',')
+      : rawValue !== undefined
+      ? String(rawValue)
+      : '';
+
     setFormData(prev => ({
       ...prev,
-      [field]: e.target?.value || e.value || ''
+      [field]: nextValue
     }));
   };
 
-  const handleModelChange = (e: any) => {
-    const modelId = e.value?.id || e.value || '';
+  const handleModelChange = (e: {value?: {id?: string} | string}) => {
+    const modelId = typeof e.value === 'string' ? e.value : (e.value as {id?: string})?.id || '';
     setFormData(prev => ({
       ...prev,
       selectedModel: modelId

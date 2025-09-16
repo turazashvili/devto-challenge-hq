@@ -27,10 +27,18 @@ const initialMessages: Message[] = [
 export default function TestChat() {
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
 
-  const handleSendMessage = (event: any) => {
+  const handleSendMessage = (event: {message: {text?: string}}) => {
+    const newMessage: Message = {
+      ...event.message,
+      text: event.message.text || ' ',
+      id: Date.now().toString(),
+      author: { id: 1, name: 'User' },
+      timestamp: new Date()
+    };
+
     setMessages((prev) => [
       ...prev,
-      { ...event.message, text: event.message.text || ' ', id: Date.now().toString() }
+      newMessage
     ]);
 
     // Simple echo response

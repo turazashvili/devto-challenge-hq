@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useTrackerData } from '../lib/useTrackerData';
-import type { TrackerState } from '../types/tracker';
 
 type TrackerContextType = ReturnType<typeof useTrackerData>;
 

@@ -10,6 +10,10 @@ import { useAISettings } from '../hooks/useAISettings';
 import { aiService } from '../services/aiService';
 import { functionExecutor } from '../services/functionExecutor';
 import AISettingsDialog from './AISettingsDialog';
+import type {
+  ChatCompletionMessageParam,
+  ChatCompletionToolMessageParam,
+} from 'openai/resources/chat/completions';
 
 interface AIChatBubbleProps {
   challengeId?: string;
@@ -50,7 +54,7 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-  const [streamingText, setStreamingText] = React.useState('');
+  // const [streamingText, setStreamingText] = React.useState('');
   const [windowWidth, setWindowWidth] = React.useState(0);
   const [windowHeight, setWindowHeight] = React.useState(0);
 
@@ -107,14 +111,16 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
     }
   }, [activeConversation, conversations, setActiveConversation]);
 
-  const addNewMessage = async (event: any) => {
+  const addNewMessage = async (event: {message: {text?: string}}) => {
     if (!activeConversation || isProcessing) return;
 
     // Add user message exactly like the working example
     const userMessage: Message = {
       ...event.message,
-      text: event.message.text || ' ',
-      id: generateMessageId()
+      text: (event.message as {text?: string}).text || ' ',
+      id: generateMessageId(),
+      author: user,
+      timestamp: new Date()
     };
 
     addMessage(activeConversation.id, userMessage);
@@ -173,8 +179,8 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
       }
 
       // Process the message with AI (Step 1: Initial request with tools)
-      setStreamingText('');
-      let currentStreamText = '';
+      // setStreamingText('');
+      const currentStreamText = '';
 
       const aiResponse = await aiService.processMessage(
         userMessage.text || '',
@@ -193,8 +199,8 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
         console.log('AI requested tool calls:', aiResponse.toolCalls);
 
         // Step 2: Execute tools locally and collect results
-        const toolResults: any[] = [];
-        const allFunctions: Array<{name: string, parameters: any, toolCallId: string}> = [];
+        const toolResults: ChatCompletionToolMessageParam[] = [];
+        const allFunctions: Array<{name: string, parameters: Record<string, unknown>, toolCallId: string}> = [];
 
         console.log(`Processing ${aiResponse.toolCalls.length} tool calls`);
 
@@ -247,7 +253,7 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
             // Collect the function call for batch execution
             allFunctions.push({
               name: functionName,
-              parameters: functionArgs,
+              parameters: functionArgs as Record<string, unknown>,
               toolCallId: toolCall.id
             });
           }
@@ -291,7 +297,7 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
         console.log(`Completed ${toolResults.length} tool executions`);
 
         // Build the conversation for Step 3
-        const conversationMessages = [
+        const conversationMessages: ChatCompletionMessageParam[] = [
           {
             role: 'system' as const,
             content: `You are an AI assistant for a dev challenge tracker. You can help users manage their challenges, tasks, ideas, and resources.
@@ -316,8 +322,8 @@ IMPORTANT:
 Be helpful, concise, and proactive in suggesting actions.`
           },
           // Add conversation history
-          ...activeConversation.messages.slice(-8).map((msg): any => ({
-            role: msg.author.id === 1 ? 'user' : 'assistant',
+          ...activeConversation.messages.slice(-8).map((msg): {role: 'user' | 'assistant', content: string} => ({
+            role: (msg.author.id === 1 ? 'user' : 'assistant') as 'user' | 'assistant',
             content: msg.text || ''
           })),
           // Add current user message
@@ -353,7 +359,7 @@ Be helpful, concise, and proactive in suggesting actions.`
         };
 
         addMessage(activeConversation.id, botResponse);
-        setStreamingText('');
+        // setStreamingText('');
       } else {
         // No tools needed, just send the regular response
         const botResponse: Message = {
@@ -364,7 +370,7 @@ Be helpful, concise, and proactive in suggesting actions.`
         };
 
         addMessage(activeConversation.id, botResponse);
-        setStreamingText('');
+        // setStreamingText('');
       }
 
     } catch (error) {

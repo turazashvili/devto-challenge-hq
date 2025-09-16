@@ -26,11 +26,11 @@ export function useChatManager() {
       try {
         const parsed = JSON.parse(stored);
         // Convert date strings back to Date objects
-        const conversations = parsed.conversations.map((conv: any) => ({
+        const conversations = parsed.conversations.map((conv: {id: string, title: string, contextChallengeId?: string, messages: Array<{timestamp: string}>, createdAt: string, updatedAt: string}) => ({
           ...conv,
           createdAt: new Date(conv.createdAt),
           updatedAt: new Date(conv.updatedAt),
-          messages: conv.messages.map((msg: any) => ({
+          messages: conv.messages.map((msg: {timestamp: string}) => ({
             ...msg,
             timestamp: new Date(msg.timestamp)
           }))
