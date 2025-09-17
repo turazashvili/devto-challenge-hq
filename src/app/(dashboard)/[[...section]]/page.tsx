@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  AppBar,
-  AppBarSection,
-  AppBarSpacer,
-} from "@progress/kendo-react-layout";
-import { Button, ButtonGroup } from "@progress/kendo-react-buttons";
+import { Button } from "@progress/kendo-react-buttons";
 import { DropDownList } from "@progress/kendo-react-dropdowns";
 import { DatePicker } from "@progress/kendo-react-dateinputs";
 import { Input, TextArea } from "@progress/kendo-react-inputs";
@@ -34,6 +29,8 @@ import type {
   Task,
 } from "@/types/tracker";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { SharedAppBar } from "@/components/SharedAppBar";
+import { upsertResourceClient, mdChallenge, mdTask, mdIdea, mdResource } from "@/lib/nucliaClient";
 
 const challengeStatuses: ChallengeStatus[] = [
   "Ideation",
@@ -161,15 +158,56 @@ const panelClass =
   "rounded-3xl border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(17,17,17,0.05)]";
 
 export default function Home() {
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+
+  // Nuclia (RAG) settings stored on the client so users can paste their own values
+  type RagSettings = {
+    apiKey: string;
+    knowledgebox: string;
+    zone: string;
+    account: string;
+    kbslug: string;
+    backend: string;
+    cdn: string;
+  };
+  const RAG_STORAGE_KEY = 'nuclia-settings';
+  const [ragSettings, setRagSettings] = useState<RagSettings>({
+    apiKey: typeof window !== 'undefined' ? (localStorage.getItem('NEXT_PUBLIC_NUCLIA_API_KEY') || '') : '',
+    knowledgebox: '',
+    zone: '',
+    account: '',
+    kbslug: '',
+    backend: 'https://rag.progress.cloud/api',
+    cdn: 'https://cdn.rag.progress.cloud/'
+  });
+  const [isRagSettingsOpen, setIsRagSettingsOpen] = useState(false);
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RAG_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<RagSettings>;
+        setRagSettings(prev => ({ ...prev, ...parsed }));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const saveRagSettings = () => {
+    localStorage.setItem(RAG_STORAGE_KEY, JSON.stringify(ragSettings));
+    setIsRagSettingsOpen(false);
+  };
   const router = useRouter();
   const params = useParams<{ section?: string[] }>();
 
   const {
     state,
     derived,
-    addChallenge,
+    addChallengeWithId,
     updateChallengeStatus,
-    addTask,
+    addTaskWithId,
     updateTaskStatus,
     updateTask,
     removeTask,
@@ -321,7 +359,24 @@ export default function Home() {
       description: challengeForm.description.trim(),
     };
 
-    addChallenge(payload);
+    console.log('[Nuclia] create challenge payload', payload);
+    // Create and capture ID to sync immediately
+    const newId = addChallengeWithId(payload);
+    try {
+      console.log('[Nuclia] syncing challenge', newId);
+      upsertResourceClient({
+        id: `challenge-${newId}`,
+        title: payload.title,
+        markdown: mdChallenge({
+          title: payload.title,
+          theme: payload.theme,
+          deadline: payload.deadline || null,
+          description: payload.description || '',
+          tags: payload.tags || []
+        }),
+        labels: ['challenge']
+      }).catch((e) => console.error('[Nuclia] upsert challenge error', e));
+    } catch {}
     closeDialog();
   };
 
@@ -336,6 +391,7 @@ export default function Home() {
       notes: taskForm.notes.trim() || undefined,
     };
 
+    console.log('[Nuclia] create/update task payload', payload);
     if (editingTaskId) {
       updateTask(editingTaskId, {
         challengeId: payload.challengeId,
@@ -345,7 +401,17 @@ export default function Home() {
         notes: payload.notes,
       });
     } else {
-      addTask(payload);
+      const newTaskId = addTaskWithId(payload);
+      try {
+        console.log('[Nuclia] syncing task', newTaskId);
+        upsertResourceClient({
+          id: `task-${newTaskId}`,
+          title: payload.title,
+          markdown: mdTask({ title: payload.title, status: payload.status, dueDate: payload.dueDate || null, notes: payload.notes || '' }),
+          labels: ['task'],
+          links: payload.challengeId ? { challenge: { uri: `kb://challenge-${payload.challengeId}` } } : undefined
+        }).catch((e) => console.error('[Nuclia] upsert task error', e));
+      } catch {}
     }
 
     closeDialog();
@@ -377,8 +443,38 @@ export default function Home() {
         tags: payload.tags,
       });
     } else {
-      addIdea(payload);
+    addIdea(payload);
+    // Sync Idea added from dashboard Ideas tab
+    try {
+      setTimeout(() => {
+        const newest = [...state.ideas].find(i => i.title === payload.title && i.notes === payload.notes);
+        if (newest) {
+          upsertResourceClient({
+            id: `idea-${newest.id}`,
+            title: newest.title,
+            markdown: mdIdea({ title: newest.title, impact: newest.impact, notes: newest.notes, tags: newest.tags || [] }),
+            labels: ['idea'],
+            links: newest.challengeId ? { challenge: { uri: `kb://challenge-${newest.challengeId}` } } : undefined
+          }).catch(() => {});
+        }
+      }, 0);
+    } catch {}
     }
+    // Sync Idea to Nuclia (fire-and-forget; read newest from state after microtask)
+    try {
+      setTimeout(() => {
+        const newest = [...state.ideas].find(i => i.title === payload.title && i.notes === payload.notes);
+        if (newest) {
+          upsertResourceClient({
+            id: `idea-${newest.id}`,
+            title: newest.title,
+            markdown: mdIdea({ title: newest.title, impact: newest.impact, notes: newest.notes, tags: newest.tags || [] }),
+            labels: ['idea'],
+            links: newest.challengeId ? { challenge: { uri: `kb://challenge-${newest.challengeId}` } } : undefined
+          }).catch(() => {});
+        }
+      }, 0);
+    } catch {}
     closeDialog();
   };
 
@@ -411,7 +507,36 @@ export default function Home() {
       });
     } else {
       addResource(payload);
+      try {
+        setTimeout(() => {
+          const newest = [...state.resources].find(r => r.title === payload.title && r.url === payload.url);
+          if (newest) {
+            upsertResourceClient({
+              id: `resource-${newest.id}`,
+              title: newest.title,
+              markdown: mdResource({ title: newest.title, type: newest.type, url: newest.url, notes: newest.notes || '', tags: newest.tags || [] }),
+              labels: ['resource'],
+              links: newest.challengeId ? { challenge: { uri: `kb://challenge-${newest.challengeId}` } } : undefined
+            }).catch(() => {});
+          }
+        }, 0);
+      } catch {}
     }
+    // Sync Resource to Nuclia (fire-and-forget; read newest from state after microtask)
+    try {
+      setTimeout(() => {
+        const newest = [...state.resources].find(r => r.title === payload.title && r.url === payload.url);
+        if (newest) {
+          upsertResourceClient({
+            id: `resource-${newest.id}`,
+            title: newest.title,
+            markdown: mdResource({ title: newest.title, type: newest.type, url: newest.url, notes: newest.notes || '', tags: newest.tags || [] }),
+            labels: ['resource'],
+            links: newest.challengeId ? { challenge: { uri: `kb://challenge-${newest.challengeId}` } } : undefined
+          }).catch(() => {});
+        }
+      }, 0);
+    } catch {}
     closeDialog();
   };
 
@@ -1432,28 +1557,20 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      <AppBar positionMode="sticky" className="border-b border-black/10 bg-white">
-        <AppBarSection className="flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-black/10 text-sm font-semibold uppercase">
-            DEV
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-black">Challenge HQ</p>
-            <p className="text-xs text-neutral-500">Ideate, plan, and publish.</p>
-          </div>
-        </AppBarSection>
-        <AppBarSpacer style={{ width: 16 }} />
-        <AppBarSection>
-          <ButtonGroup>
-            <Button onClick={() => setDialog("challenge")}>Challenge</Button>
-            <Button onClick={() => openIdeaDialog()}>Idea</Button>
-            <Button onClick={() => openResourceDialog()}>Resource</Button>
-            <Button onClick={() => openTaskDialog()}>Task</Button>
-          </ButtonGroup>
-        </AppBarSection>
-      </AppBar>
+      <SharedAppBar
+        onOpenChallengeDialog={() => setDialog("challenge")}
+        onOpenIdeaDialog={() => openIdeaDialog()}
+        onOpenResourceDialog={() => openResourceDialog()}
+        onOpenTaskDialog={() => openTaskDialog()}
+        onOpenRagSettings={() => setIsRagSettingsOpen(true)}
+        showSearchOverlay={showSearchOverlay}
+        setShowSearchOverlay={setShowSearchOverlay}
+        ragSettings={ragSettings}
+      />
 
-      <main className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10 lg:flex-row">
+      {/* Overlay renders results when open; remove inline container to avoid page shifts */}
+
+      <main className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-8 lg:flex-row">
         <nav className="lg:w-56">
           <div className="sticky top-24 rounded-3xl border border-black/10 bg-white p-4 shadow-[0_20px_50px_rgba(17,17,17,0.05)]">
             <p className="text-xs uppercase tracking-[0.35em] text-neutral-500">Workspace</p>
@@ -1495,6 +1612,76 @@ export default function Home() {
       </main>
 
       {renderDialog()}
+
+      {isRagSettingsOpen && (
+        <Dialog title="RAG Settings" onClose={() => setIsRagSettingsOpen(false)} width={520} height={520}>
+          <div className="space-y-3">
+            <div>
+              <Input 
+                label="Knowledge Box ID"
+                value={ragSettings.knowledgebox} 
+                onChange={(e) => setRagSettings(s => ({ ...s, knowledgebox: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div>
+              <Input 
+                label="Zone"
+                value={ragSettings.zone} 
+                onChange={(e) => setRagSettings(s => ({ ...s, zone: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div>
+              <Input 
+                label="Account"
+                value={ragSettings.account} 
+                onChange={(e) => setRagSettings(s => ({ ...s, account: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div>
+              <Input 
+                label="KB Slug"
+                value={ragSettings.kbslug} 
+                onChange={(e) => setRagSettings(s => ({ ...s, kbslug: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div>
+              <Input 
+                label="API Key"
+                type="password" 
+                value={ragSettings.apiKey} 
+                onChange={(e) => setRagSettings(s => ({ ...s, apiKey: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Input 
+                  label="Backend"
+                  value={ragSettings.backend} 
+                  onChange={(e) => setRagSettings(s => ({ ...s, backend: e.value || '' }))} 
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <div>
+                <Input 
+                  label="CDN"
+                  value={ragSettings.cdn} 
+                  onChange={(e) => setRagSettings(s => ({ ...s, cdn: e.value || '' }))} 
+                  style={{ width: "100%" }}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogActionsBar>
+            <Button onClick={() => setIsRagSettingsOpen(false)}>Cancel</Button>
+            <Button themeColor="primary" onClick={saveRagSettings}>Save</Button>
+          </DialogActionsBar>
+        </Dialog>
+      )}
     </div>
   );
 }

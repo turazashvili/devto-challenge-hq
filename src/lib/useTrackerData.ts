@@ -81,6 +81,22 @@ export function useTrackerData() {
     }));
   };
 
+  const addChallengeWithId = (payload: CreateChallengeInput) => {
+    const id = crypto.randomUUID();
+    setState((prev) => ({
+      ...prev,
+      challenges: [
+        {
+          id,
+          progress: statusProgress[payload.status] ?? 0,
+          ...payload,
+        },
+        ...prev.challenges,
+      ],
+    }));
+    return id;
+  };
+
   const updateChallengeStatus = (id: string, status: ChallengeStatus) => {
     setState((prev) => ({
       ...prev,
@@ -133,6 +149,21 @@ export function useTrackerData() {
     }));
   };
 
+  const addTaskWithId = (payload: CreateTaskInput) => {
+    const id = crypto.randomUUID();
+    setState((prev) => ({
+      ...prev,
+      tasks: [
+        {
+          id,
+          ...payload,
+        },
+        ...prev.tasks,
+      ],
+    }));
+    return id;
+  };
+
   const updateTaskStatus = (id: string, status: Task["status"]) => {
     setState((prev) => ({
       ...prev,
@@ -181,6 +212,21 @@ export function useTrackerData() {
     }));
   };
 
+  const addIdeaWithId = (payload: CreateIdeaInput) => {
+    const id = crypto.randomUUID();
+    setState((prev) => ({
+      ...prev,
+      ideas: [
+        {
+          id,
+          ...payload,
+        },
+        ...prev.ideas,
+      ],
+    }));
+    return id;
+  };
+
   const updateIdea = (id: string, updates: Partial<Omit<TrackerState["ideas"][number], "id">>) => {
     setState((prev) => ({
       ...prev,
@@ -213,6 +259,21 @@ export function useTrackerData() {
         ...prev.resources,
       ],
     }));
+  };
+
+  const addResourceWithId = (payload: CreateResourceInput) => {
+    const id = crypto.randomUUID();
+    setState((prev) => ({
+      ...prev,
+      resources: [
+        {
+          id,
+          ...payload,
+        },
+        ...prev.resources,
+      ],
+    }));
+    return id;
   };
 
   const updateResource = (
@@ -271,16 +332,20 @@ export function useTrackerData() {
     state,
     setState,
     addChallenge,
+    addChallengeWithId,
     updateChallengeStatus,
     updateChallenge,
     addTask,
+    addTaskWithId,
     updateTaskStatus,
     updateTask,
     removeTask,
     addIdea,
+    addIdeaWithId,
     updateIdea,
     removeIdea,
     addResource,
+    addResourceWithId,
     updateResource,
     removeResource,
     removeChallenge,

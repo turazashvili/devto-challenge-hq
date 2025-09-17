@@ -7,9 +7,11 @@
     "build": "next build --turbopack",
     "postinstall": "npx -y @progress/kendo-licensing activate",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "nuclia:tus": "node scripts/nuclia-tus-test.mjs"
   },
   "dependencies": {
+    "@nuclia/core": "^1.28.0",
     "@progress/kendo-licensing": "^1.7.1",
     "@progress/kendo-react-buttons": "^12.0.1",
     "@progress/kendo-react-conversational-ui": "^12.0.1",
@@ -24,7 +26,9 @@
     "@progress/kendo-react-progressbars": "^12.0.1",
     "@progress/kendo-svg-icons": "^4.5.0",
     "@progress/kendo-theme-default": "^12.0.1",
+    "isomorphic-unfetch": "^4.0.2",
     "jszip": "^3.10.1",
+    "localstorage-polyfill": "^1.0.1",
     "next": "15.5.3",
     "openai": "^5.20.3",
     "react": "19.1.0",

@@ -44,3 +44,8 @@ telerik-license.txt
 
 
 kendo.md
+/docs
+.pnpm-store
+.claude
+.kiro
+scripts

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Challenge, Task, Idea, Resource, TrackerState } from '../types/tracker';
 import { AIFunction } from '../types/chat';
+import { upsertResourceClient, mdChallenge, mdTask, mdIdea, mdResource } from '../lib/nucliaClient';
 
 export class FunctionExecutor {
   private static instance: FunctionExecutor;
@@ -93,6 +94,23 @@ export class FunctionExecutor {
     };
 
     updateState(newState);
+    // Fire-and-forget Nuclia sync via proxy
+    try {
+      setTimeout(() => {
+        upsertResourceClient({
+          id: `challenge-${newChallenge.id}`,
+          title: newChallenge.title,
+          markdown: mdChallenge({
+            title: newChallenge.title,
+            theme: newChallenge.theme,
+            deadline: newChallenge.deadline || null,
+            description: newChallenge.description || '',
+            tags: newChallenge.tags || []
+          }),
+          labels: ['challenge']
+        }).catch(() => {});
+      }, 0);
+    } catch {}
     return `Created new challenge: "${newChallenge.title}" with theme "${newChallenge.theme}".`;
   }
 
@@ -116,6 +134,18 @@ export class FunctionExecutor {
     };
 
     updateState(newState);
+    // Fire-and-forget Nuclia sync
+    try {
+      setTimeout(() => {
+        upsertResourceClient({
+          id: `task-${newTask.id}`,
+          title: newTask.title,
+          markdown: mdTask({ title: newTask.title, status: newTask.status, dueDate: newTask.dueDate || null, notes: newTask.notes || '' }),
+          labels: ['task'],
+          links: newTask.challengeId ? { challenge: { uri: `kb://challenge-${newTask.challengeId}` } } : undefined
+        }).catch(() => {});
+      }, 0);
+    } catch {}
 
     const challengeContext = params.challengeId
       ? ` to challenge "${currentState.challenges.find(c => c.id === params.challengeId)?.title}"`
@@ -144,6 +174,18 @@ export class FunctionExecutor {
     };
 
     updateState(newState);
+    // Fire-and-forget Nuclia sync
+    try {
+      setTimeout(() => {
+        upsertResourceClient({
+          id: `idea-${newIdea.id}`,
+          title: newIdea.title,
+          markdown: mdIdea({ title: newIdea.title, impact: newIdea.impact, notes: newIdea.notes, tags: newIdea.tags || [] }),
+          labels: ['idea'],
+          links: newIdea.challengeId ? { challenge: { uri: `kb://challenge-${newIdea.challengeId}` } } : undefined
+        }).catch(() => {});
+      }, 0);
+    } catch {}
 
     const challengeContext = params.challengeId
       ? ` to challenge "${currentState.challenges.find(c => c.id === params.challengeId)?.title}"`
@@ -173,6 +215,18 @@ export class FunctionExecutor {
     };
 
     updateState(newState);
+    // Fire-and-forget Nuclia sync
+    try {
+      setTimeout(() => {
+        upsertResourceClient({
+          id: `resource-${newResource.id}`,
+          title: newResource.title,
+          markdown: mdResource({ title: newResource.title, type: newResource.type, url: newResource.url, notes: newResource.notes || '', tags: newResource.tags || [] }),
+          labels: ['resource'],
+          links: newResource.challengeId ? { challenge: { uri: `kb://challenge-${newResource.challengeId}` } } : undefined
+        }).catch(() => {});
+      }, 0);
+    } catch {}
 
     const challengeContext = params.challengeId
       ? ` to challenge "${currentState.challenges.find(c => c.id === params.challengeId)?.title}"`

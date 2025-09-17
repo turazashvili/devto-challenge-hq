@@ -59,6 +59,8 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
   const [windowWidth, setWindowWidth] = React.useState(0);
   const [windowHeight, setWindowHeight] = React.useState(0);
   const [searchEnabled, setSearchEnabled] = React.useState(false);
+  const headerRef = React.useRef<HTMLDivElement | null>(null);
+  const [headerHeight, setHeaderHeight] = React.useState(72);
 
   // Handle responsive sizing
   React.useEffect(() => {
@@ -71,13 +73,76 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Calculate responsive chat height
-  const getChatHeight = () => {
-    const baseHeight = windowWidth < 640 ? 400 : 500;
-    const maxHeight = windowHeight - 192; // 12rem (192px) for margins
-    const chatHeight = Math.min(baseHeight, maxHeight) - 68; // Subtract header height
-    return Math.max(chatHeight, 200); // Minimum 200px
-  };
+  // Track header height to size the chat area precisely
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const element = headerRef.current;
+    if (!element) {
+      return;
+    }
+
+    setHeaderHeight(element.offsetHeight);
+
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setHeaderHeight(entry.contentRect.height);
+      }
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [isOpen]);
+
+  const dimensions = React.useMemo(() => {
+    const width = windowWidth || 1024;
+    const height = windowHeight || 768;
+    const compact = width < 640;
+
+    const horizontalInset = compact ? 16 : 24;
+    const topInset = compact ? 16 : 32;
+    const bottomInset = compact ? 16 : 32;
+
+    const availableHeight = Math.max(0, height - (topInset + bottomInset));
+    const preferredHeight = compact ? 520 : 600;
+    const desiredHeight = Math.min(preferredHeight, availableHeight);
+    const minChatSection = 240;
+    const minHeightNeeded = Math.min(availableHeight, headerHeight + minChatSection);
+    const bubbleHeight = Math.max(minHeightNeeded, desiredHeight);
+
+    const rawChatHeight = Math.max(bubbleHeight - headerHeight, 0);
+
+    const baseWidth = compact ? 360 : 384;
+    let containerWidth = baseWidth;
+    if (width > 0) {
+      const availableWidth = width - horizontalInset * 2;
+      if (availableWidth > 0) {
+        containerWidth = availableWidth >= 260 ? Math.min(baseWidth, availableWidth) : availableWidth;
+      } else {
+        containerWidth = Math.min(baseWidth, width);
+      }
+    }
+
+    if (!Number.isFinite(containerWidth) || containerWidth <= 0) {
+      containerWidth = baseWidth;
+    }
+
+    return {
+      bubbleHeight,
+      chatHeight: rawChatHeight,
+      chatWidth: containerWidth,
+      bottomInset,
+      rightInset: horizontalInset,
+      topInset,
+    } as const;
+  }, [windowWidth, windowHeight, headerHeight]);
 
 
   const {
@@ -98,6 +163,22 @@ export default function AIChatBubble({ challengeId }: AIChatBubbleProps) {
   const settingsRef = React.useRef(settings);
   settingsRef.current = settings;
   
+  const chatHeight = Math.max(dimensions.chatHeight, 0);
+  const chatWidth = Number.isFinite(dimensions.chatWidth) && dimensions.chatWidth > 0
+    ? dimensions.chatWidth
+    : windowWidth < 640
+      ? 320
+      : 384;
+  const bubbleHeight = Math.max(dimensions.bubbleHeight, headerHeight + chatHeight);
+  const bubbleStyle: React.CSSProperties = {
+    bottom: `calc(${dimensions.bottomInset}px + env(safe-area-inset-bottom, 0px))`,
+    right: `calc(${dimensions.rightInset}px + env(safe-area-inset-right, 0px))`,
+    height: bubbleHeight,
+    maxHeight: `calc(100vh - ${dimensions.topInset + dimensions.bottomInset}px)`,
+    width: chatWidth,
+    maxWidth: `calc(100vw - ${dimensions.rightInset * 2}px)`,
+  };
+
   // Debug: Log settings changes
   React.useEffect(() => {
     console.log('AIChatBubble: Settings updated:', settings);
@@ -425,7 +506,15 @@ Be helpful, concise, and proactive in suggesting actions.`
     } finally {
       setIsProcessing(false);
     }
-  }, [activeConversation, isProcessing, addMessage, searchEnabled, trackerData.state.challenges, currentChallengeId]);
+  }, [
+    activeConversation,
+    addMessage,
+    challengeId,
+    currentChallengeId,
+    isProcessing,
+    searchEnabled,
+    trackerData,
+  ]);
 
   return (
     <>
@@ -450,15 +539,15 @@ Be helpful, concise, and proactive in suggesting actions.`
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-lg shadow-xl z-50 flex flex-col"
-             style={{
-               bottom: windowWidth < 640 ? '10rem' : '10.5rem',
-               right: windowWidth < 640 ? '1rem' : '1.25rem',
-               height: `min(${windowWidth < 640 ? '400px' : '500px'}, calc(100vh - 12rem))`,
-               maxHeight: 'calc(100vh - 12rem)'
-             }}>
+        <div
+          className="fixed w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-lg shadow-xl z-50 flex flex-col"
+          style={bubbleStyle}
+        >
           {/* Chat Header with Chat Management */}
-          <div className="bg-blue-600 text-white p-3 rounded-t-lg flex items-center justify-between flex-shrink-0">
+          <div
+            ref={headerRef}
+            className="bg-blue-600 text-white p-3 rounded-t-lg flex items-center justify-between flex-shrink-0"
+          >
             <div className="flex items-center space-x-2">
               <select
                 value={activeConversation?.id || ''}
@@ -553,8 +642,8 @@ Be helpful, concise, and proactive in suggesting actions.`
                 authorId={user.id}
                 onSendMessage={addNewMessage}
                 placeholder={isProcessing ? "AI is thinking..." : "Type your message here..."}
-                height={getChatHeight()}
-                width={windowWidth < 640 ? 320 : 384}
+                height={chatHeight}
+                width={chatWidth}
                 className="k-m-auto"
                 uploadConfig={{ disabled: true }}
                 messageTemplate={ChatMessageTemplate}
@@ -565,7 +654,7 @@ Be helpful, concise, and proactive in suggesting actions.`
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                height: `${getChatHeight()}px`
+                height: `${chatHeight}px`
               }}>
                 <div style={{ textAlign: 'center' }}>
                   <p>No active conversation</p>

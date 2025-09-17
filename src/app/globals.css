@@ -279,6 +279,18 @@ body {
   max-width: 100%;
 }
 
+/* Ensure Nuclia web components are visible inline inside AppBar */
+.nuclia-host {
+  display: inline-block;
+  vertical-align: middle;
+  pointer-events: auto;
+}
+
+/* Ensure Kendo AppBar allows interactive custom elements */
+.k-appbar-section {
+  overflow: visible;
+}
+
 /* Hide Kendo Chat attachment (paperclip) button in the input area */
 .k-chat .k-upload-button-wrap,
 .k-chat .k-upload-button,
@@ -286,4 +298,39 @@ body {
 .k-chat .k-input-actions .k-button[title*="Attach"],
 .k-chat .k-input-actions .k-button .k-i-attachment {
   display: none !important;
+}
+
+/* Nuclia search results scrolling */
+nuclia-search-results {
+  display: block;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Make the answer section scrollable */
+nuclia-search-results .answer-section,
+nuclia-search-results [class*="answer"],
+nuclia-search-results .sw-text-rendering {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px; /* Add padding for scrollbar */
+}
+
+/* Custom scrollbar styling for Nuclia results */
+nuclia-search-results ::-webkit-scrollbar {
+  width: 6px;
+}
+
+nuclia-search-results ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+nuclia-search-results ::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+nuclia-search-results ::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }

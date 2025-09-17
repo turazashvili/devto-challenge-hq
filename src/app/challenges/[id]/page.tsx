@@ -1,10 +1,5 @@
 "use client";
 
-import {
-  AppBar,
-  AppBarSection,
-  AppBarSpacer,
-} from "@progress/kendo-react-layout";
 import { Button } from "@progress/kendo-react-buttons";
 import { DropDownList, MultiSelect } from "@progress/kendo-react-dropdowns";
 import { DatePicker } from "@progress/kendo-react-dateinputs";
@@ -29,6 +24,8 @@ import type {
   Task,
 } from "@/types/tracker";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { SharedAppBar } from "@/components/SharedAppBar";
+import { upsertResourceClient, mdTask, mdIdea, mdResource } from "@/lib/nucliaClient";
 
 const panelClass =
   "rounded-3xl border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(17,17,17,0.05)]";
@@ -183,6 +180,19 @@ export default function ChallengeDetailPage() {
   const [challengeForm, setChallengeForm] =
     useState<ChallengeFormState>(emptyChallengeForm);
   const [confirmDeleteChallenge, setConfirmDeleteChallenge] = useState(false);
+  
+  // Shared AppBar states
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const [isRagSettingsOpen, setIsRagSettingsOpen] = useState(false);
+  const [ragSettings, setRagSettings] = useState({
+    apiKey: typeof window !== 'undefined' ? (localStorage.getItem('NEXT_PUBLIC_NUCLIA_API_KEY') || '') : '',
+    knowledgebox: '',
+    zone: '',
+    account: '',
+    kbslug: '',
+    backend: 'https://rag.progress.cloud/api',
+    cdn: 'https://cdn.rag.progress.cloud/'
+  });
 
   const handleBackNavigation = useCallback(() => {
     const returnTo = searchParams?.get('returnTo');
@@ -194,6 +204,26 @@ export default function ChallengeDetailPage() {
       router.push('/');
     }
   }, [router, searchParams]);
+
+  // RAG Settings management
+  const RAG_STORAGE_KEY = 'nuclia-settings';
+  
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RAG_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<typeof ragSettings>;
+        setRagSettings(prev => ({ ...prev, ...parsed }));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const saveRagSettings = () => {
+    localStorage.setItem(RAG_STORAGE_KEY, JSON.stringify(ragSettings));
+    setIsRagSettingsOpen(false);
+  };
 
   useEffect(() => {
     if (!challenge) return;
@@ -301,7 +331,23 @@ const handleCardKeyDown = (
     } else if (challengeId) {
       addTask(payload);
     }
-
+    // Nuclia sync via proxy
+    try {
+      setTimeout(() => {
+        const task = dialog?.type === 'task' && dialog.mode === 'edit' && dialog.itemId
+          ? state.tasks.find(t => t.id === dialog.itemId)
+          : [...state.tasks].find(t => t.title === payload.title && t.challengeId === challengeId);
+        if (task) {
+          upsertResourceClient({
+            id: `task-${task.id}`,
+            title: task.title,
+            markdown: mdTask({ title: task.title, status: task.status, dueDate: task.dueDate || null, notes: task.notes || '' }),
+            labels: ['task'],
+            links: task.challengeId ? { challenge: { uri: `kb://challenge-${task.challengeId}` } } : undefined
+          }).catch(() => {});
+        }
+      }, 0);
+    } catch {}
     closeDialog();
   };
 
@@ -326,7 +372,23 @@ const handleCardKeyDown = (
     } else if (challengeId) {
       addIdea(payload);
     }
-
+    // Nuclia sync via proxy
+    try {
+      setTimeout(() => {
+        const idea = dialog?.type === 'idea' && dialog.mode === 'edit' && dialog.itemId
+          ? state.ideas.find(i => i.id === dialog.itemId)
+          : [...state.ideas].find(i => i.title === payload.title && i.challengeId === challengeId);
+        if (idea) {
+          upsertResourceClient({
+            id: `idea-${idea.id}`,
+            title: idea.title,
+            markdown: mdIdea({ title: idea.title, impact: idea.impact, notes: idea.notes, tags: idea.tags || [] }),
+            labels: ['idea'],
+            links: idea.challengeId ? { challenge: { uri: `kb://challenge-${idea.challengeId}` } } : undefined
+          }).catch(() => {});
+        }
+      }, 0);
+    } catch {}
     closeDialog();
   };
 
@@ -353,7 +415,23 @@ const handleCardKeyDown = (
     } else if (challengeId) {
       addResource(payload);
     }
-
+    // Nuclia sync via proxy
+    try {
+      setTimeout(() => {
+        const resource = dialog?.type === 'resource' && dialog.mode === 'edit' && dialog.itemId
+          ? state.resources.find(r => r.id === dialog.itemId)
+          : [...state.resources].find(r => r.title === payload.title && r.url === payload.url && r.challengeId === challengeId);
+        if (resource) {
+          upsertResourceClient({
+            id: `resource-${resource.id}`,
+            title: resource.title,
+            markdown: mdResource({ title: resource.title, type: resource.type, url: resource.url, notes: resource.notes || '', tags: resource.tags || [] }),
+            labels: ['resource'],
+            links: resource.challengeId ? { challenge: { uri: `kb://challenge-${resource.challengeId}` } } : undefined
+          }).catch(() => {});
+        }
+      }, 0);
+    } catch {}
     closeDialog();
   };
 
@@ -741,13 +819,16 @@ const handleCardKeyDown = (
     return (
       <div className="min-h-screen bg-white p-8 text-black">
         <div className="mx-auto max-w-3xl space-y-6">
-          <AppBar className="border-b border-black/10 bg-white">
-            <AppBarSection>
-              <Link href="/" className="text-sm font-semibold text-neutral-700 underline-offset-4 hover:underline">
-                ← Back to HQ
-              </Link>
-            </AppBarSection>
-          </AppBar>
+          <SharedAppBar
+            onOpenChallengeDialog={() => setDialog({ type: "challenge", mode: "create" })}
+            onOpenIdeaDialog={() => setDialog({ type: "idea", mode: "create" })}
+            onOpenResourceDialog={() => setDialog({ type: "resource", mode: "create" })}
+            onOpenTaskDialog={() => setDialog({ type: "task", mode: "create" })}
+            onOpenRagSettings={() => setIsRagSettingsOpen(true)}
+            showSearchOverlay={showSearchOverlay}
+            setShowSearchOverlay={setShowSearchOverlay}
+            ragSettings={ragSettings}
+          />
           <div className="rounded-3xl border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(17,17,17,0.05)]">
             <h1 className="text-2xl font-semibold">Challenge not found</h1>
             <p className="mt-2 text-neutral-600">
@@ -767,33 +848,23 @@ const handleCardKeyDown = (
 
   return (
     <div className="min-h-screen bg-white text-black">
-      <AppBar positionMode="sticky" className="border-b border-black/10 bg-white">
-        <AppBarSection className="flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-black/10 text-sm font-semibold uppercase">
-            DEV
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-black">Challenge HQ</p>
-            <p className="text-xs text-neutral-500">Focused view</p>
-          </div>
-        </AppBarSection>
-        <AppBarSpacer style={{ width: 16 }} />
-        <AppBarSection>
-          <button
-            onClick={handleBackNavigation}
-            className="text-sm font-semibold text-neutral-700 underline-offset-4 hover:underline"
-          >
-            ← Back to dashboard
-          </button>
-        </AppBarSection>
-      </AppBar>
+      <SharedAppBar
+        onOpenChallengeDialog={() => setDialog({ type: "challenge", mode: "create" })}
+        onOpenIdeaDialog={() => setDialog({ type: "idea", mode: "create" })}
+        onOpenResourceDialog={() => setDialog({ type: "resource", mode: "create" })}
+        onOpenTaskDialog={() => setDialog({ type: "task", mode: "create" })}
+        onOpenRagSettings={() => setIsRagSettingsOpen(true)}
+        showSearchOverlay={showSearchOverlay}
+        setShowSearchOverlay={setShowSearchOverlay}
+        ragSettings={ragSettings}
+      />
 
       <main className="mx-auto max-w-5xl space-y-8 px-6 py-10">
         <button
           onClick={handleBackNavigation}
           className="inline-flex text-xs font-semibold uppercase tracking-[0.3em] text-neutral-500 underline-offset-4 hover:underline"
         >
-          Back to HQ
+          ← Back
         </button>
 
         <section className={panelClass}>
@@ -1044,6 +1115,76 @@ const handleCardKeyDown = (
             <Button themeColor="primary" className="bg-red-600" onClick={handleDeleteChallenge}>
               Delete challenge
             </Button>
+          </DialogActionsBar>
+        </Dialog>
+      )}
+
+      {isRagSettingsOpen && (
+        <Dialog title="RAG Settings" onClose={() => setIsRagSettingsOpen(false)} width={520} height={520}>
+          <div className="space-y-3">
+            <div>
+              <Input 
+                label="Knowledge Box ID"
+                value={ragSettings.knowledgebox} 
+                onChange={(e) => setRagSettings(s => ({ ...s, knowledgebox: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div>
+              <Input 
+                label="Zone"
+                value={ragSettings.zone} 
+                onChange={(e) => setRagSettings(s => ({ ...s, zone: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div>
+              <Input 
+                label="Account"
+                value={ragSettings.account} 
+                onChange={(e) => setRagSettings(s => ({ ...s, account: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div>
+              <Input 
+                label="KB Slug"
+                value={ragSettings.kbslug} 
+                onChange={(e) => setRagSettings(s => ({ ...s, kbslug: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div>
+              <Input 
+                label="API Key"
+                type="password" 
+                value={ragSettings.apiKey} 
+                onChange={(e) => setRagSettings(s => ({ ...s, apiKey: e.value || '' }))} 
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Input 
+                  label="Backend"
+                  value={ragSettings.backend} 
+                  onChange={(e) => setRagSettings(s => ({ ...s, backend: e.value || '' }))} 
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <div>
+                <Input 
+                  label="CDN"
+                  value={ragSettings.cdn} 
+                  onChange={(e) => setRagSettings(s => ({ ...s, cdn: e.value || '' }))} 
+                  style={{ width: "100%" }}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogActionsBar>
+            <Button onClick={() => setIsRagSettingsOpen(false)}>Cancel</Button>
+            <Button themeColor="primary" onClick={saveRagSettings}>Save</Button>
           </DialogActionsBar>
         </Dialog>
       )}
