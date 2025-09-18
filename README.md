@@ -36,6 +36,7 @@
 - AI chat bubble with Markdown rendering, typing indicator, and responsive sizing
 
 ## Demo
+[![▶ Watch on YouTube](https://i.ytimg.com/vi_webp/cxQ01R2ail4/maxresdefault.webp)](https://www.youtube.com/watch?v=cxQ01R2ail4)
 
 - **Live app**: [Deployed on Vercel](https://devtohq.vercel.app/)
 - **Repository**: https://github.com/turazashvili/devto-challenge-hq
