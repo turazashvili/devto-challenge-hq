@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AIChatBubble from "../components/AIChatBubble";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import { TrackerProvider } from "../context/TrackerContext";
 
 const geistSans = Geist({
@@ -35,6 +36,7 @@ export default function RootLayout({
           {children}
           <AIChatBubble />
         </TrackerProvider>
+        <Analytics />
       </body>
     </html>
   );
